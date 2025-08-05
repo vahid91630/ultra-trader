@@ -1,3 +1,4 @@
-pymongo[srv]
-dnspython
-python-dotenv
+streamlit
+pymongo
+pandas
+plotly
