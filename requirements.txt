@@ -1,6 +1,3 @@
-pandas
-numpy
-flask
-requests
-pymongo
-cryptography
+pymongo[srv]
+dnspython
+python-dotenv
