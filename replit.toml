@@ -1,0 +1,7 @@
+[deployment]
+deploymentTarget = "autoscale"
+run = ["python3", "optimized_deployment_entry.py"]
+ignorePorts = false
+
+[deployment.environment]
+PORT = "5000"

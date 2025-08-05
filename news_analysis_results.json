@@ -1,0 +1,44 @@
+{
+  "timestamp": "2025-07-31T20:50:02.711794",
+  "api_status": {
+    "newsapi": true,
+    "twitter": true,
+    "polygon": true,
+    "okx": true
+  },
+  "active_apis": 4,
+  "intelligence_boost": 25,
+  "crypto_sentiment": 0.75,
+  "stock_sentiment": 0.65,
+  "total_news_analyzed": 20,
+  "market_status": {
+    "afterHours": true,
+    "currencies": {
+      "crypto": "open",
+      "fx": "open"
+    },
+    "earlyHours": false,
+    "exchanges": {
+      "nasdaq": "extended-hours",
+      "nyse": "extended-hours",
+      "otc": "extended-hours"
+    },
+    "indicesGroups": {
+      "s_and_p": "open",
+      "societe_generale": "open",
+      "msci": "open",
+      "ftse_russell": "open",
+      "mstar": "open",
+      "mstarc": "open",
+      "cccy": "open",
+      "cgi": "open",
+      "nasdaq": "open",
+      "dow_jones": "closed"
+    },
+    "market": "extended-hours",
+    "serverTime": "2025-07-31T16:50:02-04:00"
+  },
+  "recommendations": [
+    "🟢 احساسات مثبت قوی در بازار کریپتو - فرصت خرید"
+  ]
+}

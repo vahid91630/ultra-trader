@@ -1,0 +1,183 @@
+{
+  "intelligence_level": 100.0,
+  "patterns_learned": 103407,
+  "prediction_accuracy": 88.0,
+  "learning_cycles": 2000,
+  "successful_techniques": 0,
+  "win_rate": 50.0,
+  "intelligence_category": "\u0645\u0628\u062a\u062f\u06cc",
+  "last_update": "2025-07-30T19:04:45.399642",
+  "scientific_findings": {
+    "total_findings": 5,
+    "categories": [
+      "pattern_recognition",
+      "market_psychology",
+      "ai_algorithms",
+      "risk_management",
+      "market_microstructure"
+    ],
+    "avg_accuracy": 82.7,
+    "integration_date": "2025-07-30T19:24:52.893567",
+    "status": "integrated"
+  },
+  "scientific_intelligence_boost": 15.3,
+  "last_scientific_update": "2025-07-30T19:24:52.893576",
+  "scientific_findings_count": 15,
+  "intelligence_boost_from_findings": 15.3,
+  "last_findings_integration": "2025-07-30T21:22:14.226731",
+  "techniques_mastered": 23,
+  "learning_hours": 20.0,
+  "santiment_integrated": true,
+  "santiment_boost_applied": "2025-07-30T21:42:20.720132",
+  "intelligence_boost_from_santiment": 70.0,
+  "accuracy_boost_from_santiment": 15.5,
+  "new_patterns_from_santiment": 105,
+  "corrected_at": "2025-07-30T21:46:26.859895",
+  "correction_reason": "\u0647\u0645\u0627\u0647\u0646\u06af\u200c\u0633\u0627\u0632\u06cc \u0628\u0627 \u0639\u0645\u0644\u06a9\u0631\u062f \u0648\u0627\u0642\u0639\u06cc",
+  "algorithm_improvements": {
+    "quality_filter": true,
+    "confidence_threshold": 0.8,
+    "pattern_validation": true,
+    "ensemble_methods": true
+  },
+  "last_accuracy_update": "2025-07-31T06:05:34.011265",
+  "learning_acceleration_active": true,
+  "last_acceleration_cycle": "2025-07-31T19:23:33.959773",
+  "acceleration_stats": {
+    "total_patterns": 103407,
+    "average_confidence": 77.8,
+    "categories_count": 14,
+    "sources_count": 44,
+    "intelligence_level": 98.0,
+    "learning_speed_multiplier": 200.0,
+    "parallel_workers": 32,
+    "status": "enhanced_active"
+  },
+  "enhanced_learning_enabled": true,
+  "acceleration_history": [
+    {
+      "cycle_id": "acceleration_1753956213",
+      "timestamp": "2025-07-31T10:05:51.144591",
+      "duration": 137.84691834449768,
+      "improvements": {
+        "patterns_added": 3352,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 26.211745787048397,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753956223",
+      "timestamp": "2025-07-31T10:05:52.992037",
+      "duration": 129.64237308502197,
+      "improvements": {
+        "patterns_added": 4805,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 39.87085830952519,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753957536",
+      "timestamp": "2025-07-31T10:27:52.025279",
+      "duration": 135.39876508712769,
+      "improvements": {
+        "patterns_added": 2903,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 23.70916136749629,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753957548",
+      "timestamp": "2025-07-31T10:28:24.046358",
+      "duration": 155.10265946388245,
+      "improvements": {
+        "patterns_added": 5032,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 41.389940354150546,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753957561",
+      "timestamp": "2025-07-31T10:28:27.127326",
+      "duration": 145.69401717185974,
+      "improvements": {
+        "patterns_added": 4400,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 30.99672537090634,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753970058",
+      "timestamp": "2025-07-31T13:56:32.104335",
+      "duration": 133.27881813049316,
+      "improvements": {
+        "patterns_added": 2764,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 22.69940787943004,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753989641",
+      "timestamp": "2025-07-31T19:23:11.148942",
+      "duration": 149.93509697914124,
+      "improvements": {
+        "patterns_added": 2691,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 21.643239284904638,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753989658",
+      "timestamp": "2025-07-31T19:23:24.954625",
+      "duration": 146.88538193702698,
+      "improvements": {
+        "patterns_added": 1638,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 13.495645862834827,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753989674",
+      "timestamp": "2025-07-31T19:23:38.512102",
+      "duration": 143.77809119224548,
+      "improvements": {
+        "patterns_added": 2782,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 20.65825135570511,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    },
+    {
+      "cycle_id": "acceleration_1753989692",
+      "timestamp": "2025-07-31T19:23:39.800295",
+      "duration": 127.7602264881134,
+      "improvements": {
+        "patterns_added": 2801,
+        "intelligence_boost": 0,
+        "learning_speed_gain": 23.010664140738225,
+        "optimization_count": 0,
+        "sources_activated": 8
+      }
+    }
+  ],
+  "last_acceleration": "2025-07-31T19:23:39.800310",
+  "acceleration_active": true,
+  "news_api_active": true,
+  "last_news_update": "2025-07-31T20:50:02.869321"
+}

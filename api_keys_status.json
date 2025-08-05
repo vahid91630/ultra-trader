@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-07-30T19:04:45.400010",
+  "api_keys": {
+    "OPENAI_API_KEY": {
+      "name": "OpenAI",
+      "description": "هوش مصنوعی برای تحلیل بازار",
+      "status": "✅ فعال",
+      "last_check": null,
+      "usage": "تحلیل بازار، پیش‌بینی قیمت، توصیه‌های معاملاتی"
+    },
+    "ALPHA_VANTAGE_API_KEY": {
+      "name": "Alpha Vantage",
+      "description": "داده‌های بازار سهام آمریکا",
+      "status": "❌ کلید نامعتبر",
+      "last_check": null,
+      "usage": "قیمت سهام، نمودارها، اطلاعات شرکت‌ها"
+    },
+    "MONGODB_URI": {
+      "name": "MongoDB",
+      "description": "پایگاه داده NoSQL",
+      "status": "❌ خطا: SSL handshake failed: ac-yskr82s-shard-00-00.havt7",
+      "last_check": null,
+      "usage": "ذخیره داده‌های JSON، تحلیل‌ها، گزارش‌ها"
+    },
+    "OANDA_API_KEY": {
+      "name": "OANDA",
+      "description": "معاملات فارکس",
+      "status": "🔒 کلید وارد نشده",
+      "last_check": null,
+      "usage": "معامله ارزهای جهانی، EUR/USD, GBP/USD"
+    },
+    "OANDA_ACCOUNT_ID": {
+      "name": "OANDA Account",
+      "description": "شناسه حساب OANDA",
+      "status": "🔒 شناسه وارد نشده",
+      "last_check": null,
+      "usage": "دسترسی به حساب معاملاتی فارکس"
+    },
+    "COMMODITIES_API_KEY": {
+      "name": "Commodities API",
+      "description": "قیمت کالاها",
+      "status": "🔒 کلید وارد نشده",
+      "last_check": null,
+      "usage": "قیمت طلا، نقره، نفت، گاز طبیعی"
+    }
+  },
+  "summary": {
+    "total": 6,
+    "active": 1,
+    "missing": 3,
+    "error": 2
+  },
+  "recommendations": [
+    "برای فعالسازی معاملات فارکس، کلیدهای OANDA را وارد کنید",
+    "برای دسترسی به قیمت طلا و نفت، COMMODITIES_API_KEY را وارد کنید"
+  ]
+}
