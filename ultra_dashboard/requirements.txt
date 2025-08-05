@@ -1,4 +1,7 @@
 streamlit
-pymongo
-pandas
+pymongo[srv]
+cryptography
 plotly
+scikit-learn
+joblib
+pandas
