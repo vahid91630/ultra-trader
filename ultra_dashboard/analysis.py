@@ -8,4 +8,11 @@ def analyze(data):
     stats = {
         "count": len(df),
         "average": round(df["price"].mean(), 2),
-        "
+        "max": df["price"].max(),
+        "min": df["price"].min(),
+        "last": df["price"].iloc[-1],
+        "first": df["price"].iloc[0],
+        "change": round(((df["price"].iloc[-1] - df["price"].iloc[0]) / df["price"].iloc[0]) * 100, 2)
+    }
+
+    return df, stats
