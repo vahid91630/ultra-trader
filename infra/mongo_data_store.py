@@ -5,7 +5,7 @@ from pymongo.server_api import ServerApi
 def connect_to_mongodb():
     uri = os.getenv("MONGODB_URI")
     if not uri:
-        print("⚠️ MONGODB_URI not set – using Safe Mode")
+        print("⚠️ MONGO_URI not set – Running in Safe Mode")
         return None
     try:
         client = MongoClient(uri, server_api=ServerApi('1'))
