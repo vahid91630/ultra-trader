@@ -1,7 +1,13 @@
 from binance.client import Client
-import os
+
+client = Client()
 
 def get_live_price(symbol="BTCUSDT"):
-    client = Client()
     price = client.get_symbol_ticker(symbol=symbol)
-    return price
+    return {
+        "symbol": price["symbol"],
+        "price": float(price["price"])
+    }
+
+def get_all_prices(symbols=["BTCUSDT", "ETHUSDT", "SOLUSDT"]):
+    return [get_live_price(sym) for sym in symbols]
