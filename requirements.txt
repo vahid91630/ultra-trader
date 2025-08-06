@@ -1,7 +1,3 @@
 streamlit
 pymongo[srv]
-cryptography
-plotly
-scikit-learn
-joblib
-pandas
+python-dotenv
