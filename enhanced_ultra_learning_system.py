@@ -70,6 +70,7 @@ class EnhancedUltraLearningEngine:
         self.decisions_made = 0
         self.learning_active = False
         self.learning_threads = []
+        self.mongodb_integration = None  # Initialize MongoDB integration variable
         
         # حافظه‌های بهینه‌شده
         self.memory_cache = {}
@@ -91,6 +92,10 @@ class EnhancedUltraLearningEngine:
         self.metrics = EnhancedLearningMetrics()
         self._initialize_enhanced_db()
         self._load_existing_patterns()
+        
+        # Initialize MongoDB integration
+        self._setup_mongodb_integration()
+        
         logger.info(f"🚀 سیستم یادگیری فوق‌سریع تقویت‌شده آماده: {self.parallel_workers} worker")
     
     def _initialize_enhanced_db(self):
@@ -621,9 +626,39 @@ class EnhancedUltraLearningEngine:
             logger.error(f"خطا در اعتبارسنجی الگو: {e}")
             return False
 
+    def _setup_mongodb_integration(self):
+        """راه‌اندازی یکپارچه‌سازی MongoDB"""
+        try:
+            from enhanced_mongodb_integration import EnhancedMongoDBIntegration
+            self.mongodb_integration = EnhancedMongoDBIntegration()
+            
+            # تست اتصال
+            status = self.mongodb_integration.get_connection_status()
+            if status['healthy']:
+                logger.info("✅ MongoDB Integration فعال شد")
+                # همگام‌سازی داده‌های موجود
+                self._sync_to_mongodb()
+            else:
+                logger.warning("⚠️ MongoDB غیرفعال - ادامه با SQLite")
+                self.mongodb_integration = None
+                
+        except Exception as e:
+            logger.warning(f"⚠️ خطا در راه‌اندازی MongoDB: {e}")
+            self.mongodb_integration = None
+    
+    def _sync_to_mongodb(self):
+        """همگام‌سازی داده‌ها با MongoDB"""
+        if self.mongodb_integration:
+            try:
+                sync_result = self.mongodb_integration.sync_from_sqlite(self.db_path)
+                if sum(sync_result.values()) > 0:
+                    logger.info(f"📥 MongoDB همگام‌سازی: {sync_result}")
+            except Exception as e:
+                logger.warning(f"خطا در همگام‌سازی MongoDB: {e}")
+
     def _store_enhanced_pattern(self, pattern_data: bytes, confidence: float, 
                               source: str, category: str = 'general'):
-        """ذخیره الگوی تقویت‌شده با اعتبارسنجی"""
+        """ذخیره الگوی تقویت‌شده با اعتبارسنجی و MongoDB"""
         try:
             # تبدیل pattern_data برای اعتبارسنجی
             try:
@@ -643,11 +678,12 @@ class EnhancedUltraLearningEngine:
                 logger.debug(f"الگو تکراری از منبع {source}")
                 return False
             
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
             # محاسبه نمره اثربخشی
             effectiveness_score = self._calculate_effectiveness_score(pattern_dict, confidence, source)
+            
+            # ذخیره در SQLite
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
             
             cursor.execute('''
                 INSERT OR REPLACE INTO enhanced_patterns 
@@ -662,6 +698,26 @@ class EnhancedUltraLearningEngine:
             
             conn.commit()
             conn.close()
+            
+            # ذخیره در MongoDB (اگر فعال باشد)
+            if self.mongodb_integration:
+                try:
+                    mongo_pattern = {
+                        'pattern_hash': pattern_hash,
+                        'pattern_data_decoded': pattern_dict,
+                        'confidence': confidence,
+                        'success_rate': confidence * 0.9,
+                        'learning_speed': self.metrics.learning_rate,
+                        'usage_frequency': 1,
+                        'last_used': time.time(),
+                        'created_at': time.time(),
+                        'category': category,
+                        'source': source,
+                        'effectiveness_score': effectiveness_score
+                    }
+                    self.mongodb_integration.store_learning_pattern(mongo_pattern)
+                except Exception as e:
+                    logger.debug(f"خطا در ذخیره MongoDB: {e}")
             
             # اضافه به کش
             self.pattern_cache.append({
@@ -872,26 +928,65 @@ class EnhancedUltraLearningEngine:
             
             self.intelligence_score = min(base_intelligence + source_diversity_bonus + performance_bonus, 98)
             
-            # ذخیره در دیتابیس
+            # آماده‌سازی داده‌های هوش
+            intelligence_data = {
+                'timestamp': time.time(),
+                'intelligence_level': self.intelligence_score,
+                'patterns_count': self.patterns_learned,
+                'learning_rate': self.metrics.learning_rate,
+                'adaptation_speed': self.metrics.adaptation_speed,
+                'decision_accuracy': self.metrics.decision_accuracy,
+                'source_diversity': len(self.learning_sources),
+                'quality_score': self._calculate_average_quality(),
+                'performance_metrics': json.dumps({
+                    'speed_multiplier': self.metrics.speed_multiplier,
+                    'parallel_workers': self.parallel_workers,
+                    'pattern_recognition_speed': self.metrics.pattern_recognition_speed,
+                    'memory_efficiency': self.metrics.memory_efficiency
+                })
+            }
+            
+            # ذخیره در SQLite
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
             cursor.execute('''
                 INSERT INTO enhanced_intelligence 
                 (timestamp, intelligence_level, patterns_count, learning_rate, 
-                 adaptation_speed, decision_accuracy, source_diversity)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                 adaptation_speed, decision_accuracy, source_diversity, quality_score, performance_metrics)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                time.time(), self.intelligence_score, self.patterns_learned,
-                self.metrics.learning_rate, self.metrics.adaptation_speed,
-                self.metrics.decision_accuracy, len(self.learning_sources)
+                intelligence_data['timestamp'], intelligence_data['intelligence_level'], 
+                intelligence_data['patterns_count'], intelligence_data['learning_rate'],
+                intelligence_data['adaptation_speed'], intelligence_data['decision_accuracy'],
+                intelligence_data['source_diversity'], intelligence_data['quality_score'],
+                intelligence_data['performance_metrics']
             ))
             
             conn.commit()
             conn.close()
             
+            # ذخیره در MongoDB (اگر فعال باشد)
+            if self.mongodb_integration:
+                try:
+                    self.mongodb_integration.store_intelligence_data(intelligence_data)
+                except Exception as e:
+                    logger.debug(f"خطا در ذخیره هوش در MongoDB: {e}")
+            
         except Exception as e:
             logger.error(f"خطا در بروزرسانی هوش: {e}")
+    
+    def _calculate_average_quality(self) -> float:
+        """محاسبه میانگین کیفیت الگوها"""
+        try:
+            if not self.pattern_cache:
+                return 0.0
+            
+            total_effectiveness = sum(p.get('effectiveness', 0) for p in self.pattern_cache)
+            return total_effectiveness / len(self.pattern_cache)
+            
+        except:
+            return 0.0
     
     def get_learning_stats(self) -> dict:
         """دریافت آمار یادگیری تفصیلی"""
