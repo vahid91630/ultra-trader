@@ -1,8 +1,10 @@
-# Ultra-minimal Dockerfile for deployment <500MB
+# Ultra-minimal Dockerfile for Railway deployment <500MB
 FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+
+# Railway provides PORT environment variable
 ENV PORT=5000
 
 # Minimal system setup
@@ -12,19 +14,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl && \
 
 WORKDIR /app
 
-# Copy minimal requirements only
-COPY requirements_deployment_minimal.txt requirements.txt
+# Copy requirements and install dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip cache purge
 
-# Copy single entry point
+# Copy application files
 COPY optimized_deployment_entry.py .
 
-# Single port exposure
-EXPOSE 5000
+# Railway will provide the PORT via environment variable
+EXPOSE $PORT
 
-# Minimal health check
+# Health check for Railway
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=2 \
-  CMD curl -f http://localhost:5000/health || exit 1
+  CMD curl -f http://localhost:$PORT/health || exit 1
 
-CMD ["python", "optimized_deployment_entry.py"]
+# Use gunicorn for production deployment
+CMD gunicorn optimized_deployment_entry:app --bind 0.0.0.0:$PORT
