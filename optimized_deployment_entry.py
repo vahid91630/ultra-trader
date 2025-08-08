@@ -91,4 +91,5 @@ def api_status():
 
 if __name__ == '__main__':
     print(f"🚀 Starting ultra-minimal deployment on port {PORT}")
+    print("⚠️  Note: For production deployment, use: gunicorn optimized_deployment_entry:app")
     app.run(host='0.0.0.0', port=PORT, debug=False)
