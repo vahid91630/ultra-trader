@@ -11,7 +11,6 @@ import json
 import asyncio
 from datetime import datetime, timedelta
 from openai import OpenAI
-import telegram
 
 class OptimizedTradingSystem:
     def __init__(self):

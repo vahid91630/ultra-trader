@@ -14,7 +14,6 @@
 ### سیستم‌های معاملاتی:
 - smart_portfolio_manager.py - مدیر هوشمند سرمایه
 - multi_market_trading_engine.py - موتور چند بازاری
-- telegram_bot_with_real_trading.py - ربات تلگرام
 
 ### سیستم‌های داده و یادگیری:
 - daily_data_collection_system.py - جمع‌آوری روزانه داده

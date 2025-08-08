@@ -35,7 +35,6 @@ The project integrates with several key external services and APIs:
 - **Alpha Vantage API**: For US stock market data.
 - **Polygon.io API**: For general market status and data.
 - **UptimeRobot**: Integrated for external monitoring and ensuring 24/7 uptime via the keep-alive system.
-- **Telegram Bot API**: For critical notifications, portfolio management, and user communications.
 - **CCXT**: Used for connecting to exchanges like MEXC.
 
 ## 🚀 TRADING SYSTEM STATUS (July 31, 2025)

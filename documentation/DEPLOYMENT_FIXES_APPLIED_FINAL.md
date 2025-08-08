@@ -27,10 +27,9 @@
 
 ### ✅ Fix #4: Requirements حداقلی
 - **قبل**: 50+ پکیج در pyproject.toml
-- **بعد**: فقط 2 پکیج ضروری
+- **بعد**: فقط 1 پکیج ضروری
   ```
   flask==3.1.1
-  python-telegram-bot==20.7
   ```
 
 ### ✅ Fix #5: .dockerignore جامع
@@ -53,7 +52,7 @@
 ✅ **آماده برای Deployment**
 - حجم Docker: <500MB (از >8GB)
 - پورت‌ها: تک پورت 5000
-- Dependencies: 2 پکیج فقط
+- Dependencies: 1 پکیج فقط
 - Entry point: بهینه شده
 - Cache exclusion: کامل
 

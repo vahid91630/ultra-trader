@@ -36,7 +36,7 @@ dependencies = [
     "pymongo[srv]>=4.13.2",
     "python-binance>=1.0.29",
     "python-dotenv>=1.1.1",
-    "python-telegram-bot==20.7",
+
     "pytz>=2025.2",
     "requests>=2.32.4",
     "schedule>=1.2.2",
@@ -46,7 +46,7 @@ dependencies = [
     "statsmodels>=0.14.5",
     "streamlit>=1.46.1",
     "ta>=0.11.0",
-    "telegram>=0.0.1",
+
     "tensorflow>=2.14.0",
     "trafilatura>=2.0.0",
     "waitress>=3.0.2",
