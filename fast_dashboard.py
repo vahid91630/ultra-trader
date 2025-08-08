@@ -12,7 +12,13 @@ import subprocess
 from datetime import datetime
 import pytz
 import logging
-from learning_system_dashboard_integration import get_learning_dashboard_data
+
+# Optional import for learning system
+try:
+    from learning_system_dashboard_integration import get_learning_dashboard_data
+except ImportError:
+    def get_learning_dashboard_data():
+        return {"status": "learning_system_not_available"}
 
 # تنظیم لاگ
 logging.basicConfig(level=logging.INFO)
@@ -449,6 +455,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     logger.info("🚀 شروع داشبورد سریع...")
     logger.info(f"📊 دسترسی: http://localhost:{port}")
+    logger.info("⚠️  برای محیط تولید از Gunicorn استفاده کنید: gunicorn -c gunicorn.conf.py fast_dashboard:app")
     app.run(host='0.0.0.0', port=port, debug=False)
 @app.route('/health')
 def health_check():
