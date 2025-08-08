@@ -13,6 +13,7 @@ from datetime import datetime
 import pytz
 import logging
 from learning_system_dashboard_integration import get_learning_dashboard_data
+from monitoring.monitoring_reports import MonitoringReports
 
 # تنظیم لاگ
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +24,7 @@ app = Flask(__name__)
 class FastDashboard:
     def __init__(self):
         self.tehran_tz = pytz.timezone('Asia/Tehran')
+        self.monitoring = MonitoringReports()  # اضافه کردن سیستم گزارشات
     
     def get_persian_datetime(self):
         """دریافت تاریخ فارسی (سریع و بدون تاخیر)"""
@@ -443,6 +445,81 @@ def start_acceleration():
             'status': 'error',
             'error': f'خطا در شروع تسریع: {str(e)}'
         })
+
+# گزارشات مانیتورینگ جدید
+@app.route('/api/reports/system-analysis')
+def get_system_analysis_report():
+    """گزارش پیشرفت سیستم تحلیل و آموزشی"""
+    try:
+        dashboard = FastDashboard()
+        report = dashboard.monitoring.get_system_analysis_progress_report()
+        return jsonify(report)
+    except Exception as e:
+        logger.error(f"خطا در گزارش سیستم تحلیل: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reports/ai-intelligence')
+def get_ai_intelligence_report():
+    """گزارش مقدار هوش و درصد"""
+    try:
+        dashboard = FastDashboard()
+        report = dashboard.monitoring.get_ai_intelligence_percentage_report()
+        return jsonify(report)
+    except Exception as e:
+        logger.error(f"خطا در گزارش هوش مصنوعی: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reports/real-profit')
+def get_real_profit_report():
+    """گزارش سود واقعی"""
+    try:
+        dashboard = FastDashboard()
+        report = dashboard.monitoring.get_real_profit_report()
+        return jsonify(report)
+    except Exception as e:
+        logger.error(f"خطا در گزارش سود: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reports/system-activity')
+def get_system_activity_report():
+    """گزارش فعالیت سیستم"""
+    try:
+        dashboard = FastDashboard()
+        report = dashboard.monitoring.get_system_activity_report()
+        return jsonify(report)
+    except Exception as e:
+        logger.error(f"خطا در گزارش فعالیت: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reports/exchange-balance')
+def get_exchange_balance_report():
+    """گزارش مقدار واقعی موجود در صرافی"""
+    try:
+        dashboard = FastDashboard()
+        report = dashboard.monitoring.get_real_exchange_balance_report()
+        return jsonify(report)
+    except Exception as e:
+        logger.error(f"خطا در گزارش موجودی صرافی: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/reports/all')
+def get_all_reports():
+    """دریافت تمام گزارشات به‌صورت یکجا"""
+    try:
+        dashboard = FastDashboard()
+        reports = dashboard.monitoring.get_all_reports()
+        return jsonify({
+            'timestamp': dashboard.get_persian_datetime(),
+            'reports': reports
+        })
+    except Exception as e:
+        logger.error(f"خطا در دریافت تمام گزارشات: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/reports')
+def reports_dashboard():
+    """صفحه نمایش گزارشات"""
+    return render_template('reports.html')
 
 if __name__ == '__main__':
     import os

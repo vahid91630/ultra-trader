@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>گزارشات مانیتورینگ - ربات پولساز وحید</title>
+    <style>
+        * {
+            font-family: 'Tahoma', Arial, sans-serif;
+            box-sizing: border-box;
+        }
+        
+        body {
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            margin: 10px 0;
+            opacity: 0.9;
+        }
+        
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .report-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid #e0e0e0;
+        }
+        
+        .report-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .report-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .report-icon {
+            font-size: 2em;
+            margin-left: 15px;
+        }
+        
+        .report-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .report-content {
+            line-height: 1.6;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            padding: 8px 0;
+            border-bottom: 1px solid #f8f8f8;
+        }
+        
+        .metric-label {
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #2980b9;
+        }
+        
+        .status-excellent { color: #27ae60; }
+        .status-good { color: #f39c12; }
+        .status-average { color: #e67e22; }
+        .status-poor { color: #e74c3c; }
+        
+        .recommendations {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .recommendations h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .recommendations ul {
+            margin: 0;
+            padding-right: 20px;
+        }
+        
+        .recommendations li {
+            margin: 5px 0;
+            color: #555;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 1.2em;
+            color: white;
+        }
+        
+        .error {
+            background: #e74c3c;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        
+        .refresh-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 20px auto;
+            display: block;
+        }
+        
+        .refresh-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .timestamp {
+            text-align: center;
+            color: white;
+            margin: 20px 0;
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .reports-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .report-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 گزارشات مانیتورینگ سیستم</h1>
+            <p>ربات پولساز وحید - مانیتورینگ زنده و هوشمند</p>
+            <div class="timestamp" id="lastUpdate"></div>
+        </div>
+        
+        <button class="refresh-btn" onclick="loadAllReports()">🔄 بروزرسانی گزارشات</button>
+        
+        <div id="loading" class="loading">
+            در حال بارگیری گزارشات...
+        </div>
+        
+        <div id="reports-container" class="reports-grid" style="display: none;">
+            <!-- گزارشات اینجا بارگیری می‌شوند -->
+        </div>
+    </div>
+
+    <script>
+        async function loadAllReports() {
+            const loadingElement = document.getElementById('loading');
+            const containerElement = document.getElementById('reports-container');
+            const timestampElement = document.getElementById('lastUpdate');
+            
+            loadingElement.style.display = 'block';
+            containerElement.style.display = 'none';
+            
+            try {
+                const response = await fetch('/api/reports/all');
+                const data = await response.json();
+                
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                
+                timestampElement.textContent = `آخرین بروزرسانی: ${data.timestamp}`;
+                renderReports(data.reports);
+                
+                loadingElement.style.display = 'none';
+                containerElement.style.display = 'grid';
+                
+            } catch (error) {
+                loadingElement.innerHTML = `<div class="error">خطا در بارگیری گزارشات: ${error.message}</div>`;
+            }
+        }
+        
+        function renderReports(reports) {
+            const container = document.getElementById('reports-container');
+            container.innerHTML = '';
+            
+            // گزارش پیشرفت سیستم تحلیل و آموزشی
+            container.appendChild(createSystemAnalysisCard(reports.system_analysis));
+            
+            // گزارش هوش مصنوعی
+            container.appendChild(createAIIntelligenceCard(reports.ai_intelligence));
+            
+            // گزارش سود واقعی
+            container.appendChild(createProfitCard(reports.real_profit));
+            
+            // گزارش فعالیت سیستم
+            container.appendChild(createActivityCard(reports.system_activity));
+            
+            // گزارش موجودی صرافی
+            container.appendChild(createBalanceCard(reports.exchange_balance));
+        }
+        
+        function createSystemAnalysisCard(data) {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+            card.innerHTML = `
+                <div class="report-header">
+                    <div class="report-icon">🧠</div>
+                    <div class="report-title">${data.title}</div>
+                </div>
+                <div class="report-content">
+                    <div class="metric">
+                        <span class="metric-label">وضعیت سیستم:</span>
+                        <span class="metric-value">${data.status}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">سطح هوش:</span>
+                        <span class="metric-value">${data.intelligence_level}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">الگوهای یادگیری شده:</span>
+                        <span class="metric-value">${data.patterns_learned.toLocaleString()}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">دقت پیش‌بینی:</span>
+                        <span class="metric-value">${data.prediction_accuracy}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">ساعات یادگیری:</span>
+                        <span class="metric-value">${data.learning_hours}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">تکنیک‌های تسلط یافته:</span>
+                        <span class="metric-value">${data.techniques_mastered}</span>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+        
+        function createAIIntelligenceCard(data) {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+            card.innerHTML = `
+                <div class="report-header">
+                    <div class="report-icon">🤖</div>
+                    <div class="report-title">${data.title}</div>
+                </div>
+                <div class="report-content">
+                    <div class="metric">
+                        <span class="metric-label">سطح فعلی:</span>
+                        <span class="metric-value">${data.current_level}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">پتانسیل کامل:</span>
+                        <span class="metric-value">${data.potential_level}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">هوش یادگیری:</span>
+                        <span class="metric-value">${data.learning_intelligence}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">تقویت علمی:</span>
+                        <span class="metric-value">${data.scientific_boost}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">دسته‌بندی هوش:</span>
+                        <span class="metric-value">${data.intelligence_category}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">سیستم‌های فعال:</span>
+                        <span class="metric-value">${data.active_ai_systems.join(', ') || 'هیچکدام'}</span>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+        
+        function createProfitCard(data) {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+            const statusClass = getStatusClass(data.performance_status);
+            card.innerHTML = `
+                <div class="report-header">
+                    <div class="report-icon">💰</div>
+                    <div class="report-title">${data.title}</div>
+                </div>
+                <div class="report-content">
+                    <div class="metric">
+                        <span class="metric-label">سود کل:</span>
+                        <span class="metric-value">${data.total_profit} BTC</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">سود به دلار:</span>
+                        <span class="metric-value">$${data.total_profit_usd.toLocaleString()}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">کل معاملات:</span>
+                        <span class="metric-value">${data.total_trades}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">نرخ برد:</span>
+                        <span class="metric-value">${data.win_rate}%</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">میانگین روزانه:</span>
+                        <span class="metric-value">${data.daily_average} BTC</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">وضعیت عملکرد:</span>
+                        <span class="metric-value ${statusClass}">${data.performance_status}</span>
+                    </div>
+                    ${data.recommendations.length > 0 ? `
+                    <div class="recommendations">
+                        <h4>پیشنهادات:</h4>
+                        <ul>
+                            ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            return card;
+        }
+        
+        function createActivityCard(data) {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+            card.innerHTML = `
+                <div class="report-header">
+                    <div class="report-icon">⚡</div>
+                    <div class="report-title">${data.title}</div>
+                </div>
+                <div class="report-content">
+                    <div class="metric">
+                        <span class="metric-label">سیستم یادگیری:</span>
+                        <span class="metric-value">${data.learning_system_status}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">سیستم هوش مصنوعی:</span>
+                        <span class="metric-value">${data.ai_system_status}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">وضعیت خبرها:</span>
+                        <span class="metric-value">${data.news_api_status}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">کارگران فعال:</span>
+                        <span class="metric-value">${data.active_workers}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">سرعت یادگیری:</span>
+                        <span class="metric-value">${data.learning_speed_multiplier}x</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">سلامت سیستم:</span>
+                        <span class="metric-value ${getStatusClass(data.system_health)}">${data.system_health}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">وضعیت آنلاین:</span>
+                        <span class="metric-value">${data.uptime_status}</span>
+                    </div>
+                </div>
+            `;
+            return card;
+        }
+        
+        function createBalanceCard(data) {
+            const card = document.createElement('div');
+            card.className = 'report-card';
+            const balances = data.balances;
+            card.innerHTML = `
+                <div class="report-header">
+                    <div class="report-icon">🏦</div>
+                    <div class="report-title">${data.title}</div>
+                </div>
+                <div class="report-content">
+                    <div class="metric">
+                        <span class="metric-label">صرافی:</span>
+                        <span class="metric-value">${data.exchange_name}</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">وضعیت اتصال:</span>
+                        <span class="metric-value">${data.connection_status}</span>
+                    </div>
+                    ${Object.entries(balances).map(([symbol, balance]) => `
+                        <div class="metric">
+                            <span class="metric-label">${symbol}:</span>
+                            <span class="metric-value">${balance.total}</span>
+                        </div>
+                    `).join('')}
+                    <div class="metric">
+                        <span class="metric-label">کل موجودی (دلار):</span>
+                        <span class="metric-value">$${data.total_balance_usd.toLocaleString()}</span>
+                    </div>
+                    ${data.warning ? `
+                    <div class="recommendations">
+                        <h4>هشدار:</h4>
+                        <p style="color: #e67e22;">${data.warning}</p>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+            return card;
+        }
+        
+        function getStatusClass(status) {
+            const statusMap = {
+                'عالی': 'status-excellent',
+                'سالم': 'status-excellent',
+                'خوب': 'status-good',
+                'متوسط': 'status-average',
+                'نیاز به بهبود': 'status-poor',
+                'نیاز به توجه': 'status-poor'
+            };
+            return statusMap[status] || '';
+        }
+        
+        // بارگیری اولیه
+        loadAllReports();
+        
+        // بروزرسانی خودکار هر 30 ثانیه
+        setInterval(loadAllReports, 30000);
+    </script>
+</body>
+</html>
