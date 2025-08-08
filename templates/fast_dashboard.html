@@ -175,6 +175,70 @@
             font-size: 0.9rem;
             color: #00ff88;
         }
+        
+        .activity-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 8px 0;
+            border-left: 3px solid #00ff88;
+        }
+        
+        .activity-item.error {
+            border-left-color: #ff4444;
+        }
+        
+        .activity-item.warning {
+            border-left-color: #ffa500;
+        }
+        
+        .activity-item.info {
+            border-left-color: #4444ff;
+        }
+        
+        .activity-timestamp {
+            font-size: 0.8rem;
+            color: #cccccc;
+            margin-bottom: 5px;
+        }
+        
+        .activity-title {
+            font-weight: bold;
+            margin-bottom: 3px;
+        }
+        
+        .activity-description {
+            font-size: 0.9rem;
+            color: #ffffff;
+        }
+        
+        .alert-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 8px 0;
+            border-left: 3px solid #00ff88;
+        }
+        
+        .alert-item.warning {
+            border-left-color: #ffa500;
+            background: rgba(255, 165, 0, 0.1);
+        }
+        
+        .alert-item.error {
+            border-left-color: #ff4444;
+            background: rgba(255, 68, 68, 0.1);
+        }
+        
+        .alert-item.success {
+            border-left-color: #00ff88;
+            background: rgba(0, 255, 136, 0.1);
+        }
+        
+        .alert-item.info {
+            border-left-color: #4444ff;
+            background: rgba(68, 68, 255, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -237,6 +301,14 @@
                 </div>
             </div>
             
+            <!-- هشدارهای سیستم -->
+            <div class="card">
+                <div class="card-title">🚨 هشدارهای سیستم</div>
+                <div id="systemAlerts">
+                    <div class="loading">در حال بارگذاری...</div>
+                </div>
+            </div>
+            
             <!-- وضعیت APIها -->
             <div class="card">
                 <div class="card-title">🔗 وضعیت کلیدهای API</div>
@@ -249,6 +321,22 @@
             <div class="card">
                 <div class="card-title">🧠 پیشرفت یادگیری هوش مصنوعی</div>
                 <div id="learningProgress">
+                    <div class="loading">در حال بارگذاری...</div>
+                </div>
+            </div>
+            
+            <!-- یافته‌های علمی جدید -->
+            <div class="card">
+                <div class="card-title">🔬 یافته‌های علمی و تحقیقات</div>
+                <div id="scientificFindings">
+                    <div class="loading">در حال بارگذاری...</div>
+                </div>
+            </div>
+            
+            <!-- فعالیت‌های اخیر و لاگ‌ها -->
+            <div class="card">
+                <div class="card-title">📜 فعالیت‌های اخیر و لاگ‌ها</div>
+                <div id="recentActivities">
                     <div class="loading">در حال بارگذاری...</div>
                 </div>
             </div>
@@ -299,8 +387,11 @@
                     updatePersianDateTime(data.persian_datetime);
                     updateExchangeBalance(data.exchange_balance);  // خط اول: موجودی و سود
                     updateSystemResources(data.system_resources);
+                    updateSystemAlerts(data.system_alerts);  // جدید: هشدارهای سیستم
                     updateApiStatus(data.api_status);
                     updateLearningProgress(data.learning_progress);
+                    updateScientificFindings(data.scientific_findings);  // جدید: یافته‌های علمی
+                    updateRecentActivities(data.recent_activities);  // جدید: فعالیت‌های اخیر
                     updateTradingReports(data.trading_reports);
                     updateExchangeStatus(data.exchange_status);
                     updateNewsAnalysis(data.news_analysis);
@@ -511,6 +602,124 @@
                 </div>
             `;
             document.getElementById('newsAnalysis').innerHTML = html;
+        }
+        
+        function updateSystemAlerts(data) {
+            if (!data || !Array.isArray(data)) {
+                document.getElementById('systemAlerts').innerHTML = '<div style="text-align: center; color: #00ff88;">هیچ هشداری موجود نیست</div>';
+                return;
+            }
+            
+            let html = '';
+            data.forEach(alert => {
+                const alertClass = alert.type || 'info';
+                const alertIcon = {
+                    'success': '✅',
+                    'warning': '⚠️',
+                    'error': '❌',
+                    'info': 'ℹ️'
+                }[alertClass] || 'ℹ️';
+                
+                html += `
+                    <div class="alert-item ${alertClass}">
+                        <div class="activity-title">${alertIcon} ${alert.title}</div>
+                        <div class="activity-description">${alert.message}</div>
+                        <div class="activity-timestamp">${new Date(alert.timestamp).toLocaleString('fa-IR')}</div>
+                    </div>
+                `;
+            });
+            
+            if (html === '') {
+                html = '<div style="text-align: center; color: #00ff88;">همه چیز عادی است ✅</div>';
+            }
+            
+            document.getElementById('systemAlerts').innerHTML = html;
+        }
+        
+        function updateRecentActivities(data) {
+            if (!data || !Array.isArray(data)) {
+                document.getElementById('recentActivities').innerHTML = '<div style="text-align: center; color: #cccccc;">فعالیتی یافت نشد</div>';
+                return;
+            }
+            
+            let html = '';
+            data.slice(0, 8).forEach(activity => {  // نمایش 8 فعالیت اخیر
+                const statusClass = activity.status || 'info';
+                const statusIcon = {
+                    'success': '✅',
+                    'warning': '⚠️',
+                    'error': '❌',
+                    'info': 'ℹ️',
+                    'trade': '💰',
+                    'learning': '🧠',
+                    'news': '📰'
+                }[activity.type] || 'ℹ️';
+                
+                html += `
+                    <div class="activity-item ${statusClass}">
+                        <div class="activity-timestamp">${new Date(activity.timestamp).toLocaleString('fa-IR')}</div>
+                        <div class="activity-title">${statusIcon} ${activity.title}</div>
+                        <div class="activity-description">${activity.description}</div>
+                        ${activity.details ? `<div style="font-size: 0.8rem; color: #cccccc; margin-top: 5px;">${activity.details}</div>` : ''}
+                    </div>
+                `;
+            });
+            
+            document.getElementById('recentActivities').innerHTML = html;
+        }
+        
+        function updateScientificFindings(data) {
+            if (!data) return;
+            
+            let html = `
+                <div class="metric">
+                    <span class="metric-label">کل یافته‌ها:</span>
+                    <span class="metric-value status-good">${data.total_findings}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">میانگین دقت:</span>
+                    <span class="metric-value status-good">${data.accuracy_trend.toFixed(1)}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">وضعیت ادغام:</span>
+                    <span class="metric-value ${data.integration_status === 'active' ? 'status-good' : 'status-warning'}">${data.integration_status === 'active' ? 'فعال' : 'غیرفعال'}</span>
+                </div>
+            `;
+            
+            // نمایش دسته‌بندی‌ها
+            if (data.categories && Object.keys(data.categories).length > 0) {
+                html += '<div style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 15px; padding-top: 15px;">';
+                html += '<div style="font-weight: bold; margin-bottom: 10px; color: #00ff88;">دسته‌بندی‌های یافته‌ها:</div>';
+                
+                Object.entries(data.categories).forEach(([name, info]) => {
+                    html += `
+                        <div class="metric" style="margin: 5px 0;">
+                            <span class="metric-label">${name}:</span>
+                            <span class="metric-value">فعال</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            // نمایش یافته‌های اخیر
+            if (data.recent_findings && data.recent_findings.length > 0) {
+                html += '<div style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 15px; padding-top: 15px;">';
+                html += '<div style="font-weight: bold; margin-bottom: 10px; color: #00ff88;">یافته‌های اخیر:</div>';
+                
+                data.recent_findings.slice(0, 3).forEach(finding => {
+                    html += `
+                        <div style="background: rgba(255,255,255,0.05); padding: 8px; margin: 5px 0; border-radius: 5px; font-size: 0.9rem;">
+                            <div>الگوهای جدید: <span style="color: #00ff88;">${finding.patterns_added}</span></div>
+                            <div>بهبود یادگیری: <span style="color: #00ff88;">+${finding.learning_gain.toFixed(1)}%</span></div>
+                            <div>منابع فعال: <span style="color: #00ff88;">${finding.sources}</span></div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+            
+            document.getElementById('scientificFindings').innerHTML = html;
         }
         
         function startUpdates() {
