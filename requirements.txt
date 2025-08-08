@@ -2,3 +2,6 @@ streamlit
 pymongo[srv]
 python-dotenv
 python-binance
+pandas
+plotly
+requests
