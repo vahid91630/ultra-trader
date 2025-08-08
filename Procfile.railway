@@ -1,0 +1,3 @@
+# Alternative Procfile for Railway deployment with explicit static file handling
+# Use this if you encounter 404 errors for apple-touch-icon.png
+web: python railway_deployment_entry.py

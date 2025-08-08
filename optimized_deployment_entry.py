@@ -6,9 +6,9 @@ Optimized for <500MB Docker image and single port deployment
 
 import os
 import json
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template_string, send_from_directory
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 # Get port from environment
 PORT = int(os.environ.get('PORT', 5000))
@@ -21,6 +21,15 @@ MINIMAL_TEMPLATE = """
     <title>Trading System</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Icon meta tags -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <meta name="theme-color" content="#1e3c72">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Trading System">
     <style>
         body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -88,6 +97,21 @@ def api_status():
         "port": PORT,
         "image_size": "<500MB"
     })
+
+@app.route('/apple-touch-icon.png')
+def apple_touch_icon():
+    """Serve apple touch icon"""
+    return send_from_directory('static/icons', 'apple-touch-icon.png')
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    return send_from_directory('static/icons', 'favicon-32x32.png')
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files"""
+    return send_from_directory('static', filename)
 
 if __name__ == '__main__':
     print(f"🚀 Starting ultra-minimal deployment on port {PORT}")
