@@ -1,1 +1,1 @@
-web: streamlit run ultra_dashboard/dashboard.py --server.enableCORS false --server.port $PORT
+web: gunicorn --bind 0.0.0.0:${PORT:-5000} fast_dashboard:app
