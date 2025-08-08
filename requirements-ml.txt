@@ -1,0 +1,28 @@
+# ML-specific dependencies for Ultra Trader
+# Core ML libraries
+lightgbm>=4.0.0
+xgboost>=2.0.0
+scikit-learn>=1.3.0
+optuna>=3.4.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# Technical analysis
+ta>=0.10.2
+
+# Database
+pymongo[srv]>=4.0.0
+
+# Visualization & Explainability
+matplotlib>=3.7.0
+seaborn>=0.12.0
+shap>=0.42.0
+
+# Configuration
+pyyaml>=6.0
+
+# Additional utilities
+python-dotenv
+tqdm
