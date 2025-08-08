@@ -10,8 +10,9 @@ from flask import Flask, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# Get port from environment
+# Get port from environment (Railway provides PORT)
 PORT = int(os.environ.get('PORT', 5000))
+print(f"🌐 Configured to run on port: {PORT}")
 
 # Minimal HTML template
 MINIMAL_TEMPLATE = """
@@ -42,9 +43,9 @@ MINIMAL_TEMPLATE = """
         </div>
         
         <div class="status info">
-            <strong>🔧 Deployment Mode: Production Ready</strong>
+            <strong>🔧 Deployment Mode: Railway Production</strong>
             <br>
-            This is the ultra-minimal deployment optimized for Replit.
+            This is the ultra-minimal deployment optimized for Railway deployment.
             <br>
             Docker image size: &lt;500MB | Single port configuration: {{ port }}
         </div>
@@ -75,7 +76,8 @@ def health():
     return jsonify({
         "status": "healthy",
         "port": PORT,
-        "deployment": "production_ready"
+        "deployment": "railway_production",
+        "platform": "Railway"
     })
 
 @app.route('/api/status')
@@ -83,10 +85,11 @@ def api_status():
     """API status endpoint"""
     return jsonify({
         "system": "active",
-        "deployment": "minimal",
+        "deployment": "railway_minimal",
         "docker_optimized": True,
         "port": PORT,
-        "image_size": "<500MB"
+        "image_size": "<500MB",
+        "platform": "Railway"
     })
 
 if __name__ == '__main__':
