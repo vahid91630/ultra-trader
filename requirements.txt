@@ -2,3 +2,7 @@ streamlit
 pymongo[srv]
 python-dotenv
 python-binance
+gunicorn
+flask
+psutil
+pytz

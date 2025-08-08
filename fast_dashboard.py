@@ -12,11 +12,15 @@ import subprocess
 from datetime import datetime
 import pytz
 import logging
-from learning_system_dashboard_integration import get_learning_dashboard_data
+# from learning_system_dashboard_integration import get_learning_dashboard_data
 
 # تنظیم لاگ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Stub function for missing integration
+def get_learning_dashboard_data():
+    return {"status": "integration not available", "data": {}}
 
 app = Flask(__name__)
 
