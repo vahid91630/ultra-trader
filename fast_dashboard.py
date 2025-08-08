@@ -3,7 +3,7 @@
 داشبورد سریع بدون تاخیر - ربات پولساز وحید
 """
 
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, send_from_directory
 import json
 import os
 import sqlite3
@@ -18,7 +18,7 @@ from learning_system_dashboard_integration import get_learning_dashboard_data
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 
 class FastDashboard:
     def __init__(self):
@@ -467,6 +467,21 @@ def readiness_check():
         'database': 'connected',
         'timestamp': datetime.now().isoformat()
     }
+
+@app.route('/apple-touch-icon.png')
+def apple_touch_icon():
+    """Serve apple touch icon"""
+    return send_from_directory('static/icons', 'apple-touch-icon.png')
+
+@app.route('/favicon.ico')
+def favicon():
+    """Serve favicon"""
+    return send_from_directory('static/icons', 'favicon-32x32.png')
+
+@app.route('/static/<path:filename>')
+def static_files(filename):
+    """Serve static files"""
+    return send_from_directory('static', filename)
 
 
 # WSGI application
