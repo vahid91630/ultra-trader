@@ -15,6 +15,7 @@ import time as time_module
 from typing import Dict, List, Any
 import numpy as np
 from openai import OpenAI
+from monitoring.persian_reporter import PersianReporter, SystemComponent, ReportLevel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,6 +41,17 @@ class DailyDataCollectionSystem:
         # مقداردهی اولیه
         self._initialize_databases()
         self.openai_client = OpenAI() if os.environ.get('OPENAI_API_KEY') else None
+        
+        # ایجاد گزارشگر فارسی
+        self.reporter = PersianReporter(
+            SystemComponent.DATA_COLLECTION,
+            log_file="monitoring/logs/data_collection_fa.log"
+        )
+        
+        self.reporter.success(
+            "راه‌اندازی سیستم",
+            "سیستم جمع‌آوری داده‌های روزانه با گزارشدهی فارسی آماده شد"
+        )
     
     def _initialize_databases(self):
         """ایجاد جداول موقت برای داده‌های روزانه"""
@@ -93,6 +105,11 @@ class DailyDataCollectionSystem:
         
         conn.commit()
         conn.close()
+        
+        self.reporter.info(
+            "مقداردهی پایگاه داده",
+            "جداول پایگاه داده با موفقیت ایجاد شدند"
+        )
     
     def collect_market_data(self, symbol: str, market: str) -> Dict:
         """جمع‌آوری داده‌های بازار"""
@@ -124,6 +141,18 @@ class DailyDataCollectionSystem:
         
         conn.commit()
         conn.close()
+        
+        self.reporter.success(
+            "جمع‌آوری داده",
+            f"داده‌های بازار {symbol} جمع‌آوری شد - قیمت: ${data['price']:.2f}",
+            {
+                'symbol': symbol,
+                'market': market,
+                'price': data['price'],
+                'volume': data['volume'],
+                'change_24h': data['change_24h']
+            }
+        )
         
         logger.info(f"📊 داده بازار جمع‌آوری شد: {symbol} - قیمت: ${data['price']:.2f}")
         return data
@@ -201,6 +230,18 @@ class DailyDataCollectionSystem:
         
         conn.commit()
         conn.close()
+        
+        self.reporter.success(
+            "تحلیل کامل",
+            f"تحلیل {symbol} انجام شد - امتیاز: {final_score:.1f} - توصیه: {recommendation}",
+            {
+                'symbol': symbol,
+                'final_score': final_score,
+                'recommendation': recommendation,
+                'detailed_scores': scores,
+                'data_points': len(raw_data)
+            }
+        )
         
         logger.info(f"✅ تحلیل {symbol}: امتیاز {final_score:.1f} - {recommendation}")
         return analysis_result
@@ -515,6 +556,71 @@ class DailyDataCollectionSystem:
             self.analyze_and_score(symbol)
         
         conn.close()
+    
+    def create_daily_persian_report(self):
+        """ایجاد گزارش جامع فارسی روزانه"""
+        try:
+            conn = sqlite3.connect(self.analysis_db)
+            cursor = conn.cursor()
+            
+            # آمار کلی روز
+            cursor.execute('''
+                SELECT COUNT(*), AVG(final_score), 
+                       SUM(CASE WHEN final_score >= 80 THEN 1 ELSE 0 END) as strong_buys,
+                       SUM(CASE WHEN final_score >= 65 THEN 1 ELSE 0 END) as buys,
+                       SUM(CASE WHEN final_score <= 35 THEN 1 ELSE 0 END) as sells
+                FROM daily_summaries 
+                WHERE date = DATE('now')
+            ''')
+            
+            stats = cursor.fetchone()
+            total_symbols = stats[0] if stats[0] else 0
+            avg_score = stats[1] if stats[1] else 0
+            strong_buys = stats[2] if stats[2] else 0
+            buys = stats[3] if stats[3] else 0
+            sells = stats[4] if stats[4] else 0
+            
+            # بهترین عملکردها
+            cursor.execute('''
+                SELECT symbol, final_score, recommendation 
+                FROM daily_summaries 
+                WHERE date = DATE('now')
+                ORDER BY final_score DESC 
+                LIMIT 5
+            ''')
+            
+            top_performers = cursor.fetchall()
+            
+            # گزارش جامع
+            report_data = {
+                'total_symbols_analyzed': total_symbols,
+                'average_score': round(avg_score, 2) if avg_score else 0,
+                'strong_buy_signals': strong_buys,
+                'buy_signals': buys,
+                'sell_signals': sells,
+                'top_performers': [
+                    {'symbol': row[0], 'score': row[1], 'recommendation': row[2]}
+                    for row in top_performers
+                ]
+            }
+            
+            conn.close()
+            
+            # گزارش فارسی
+            self.reporter.info(
+                "گزارش روزانه",
+                f"تحلیل {total_symbols} نماد - میانگین امتیاز: {avg_score:.1f} - سیگنال خرید قوی: {strong_buys}",
+                report_data
+            )
+            
+            return report_data
+            
+        except Exception as e:
+            self.reporter.error(
+                "خطا در گزارش روزانه",
+                f"خطا در ایجاد گزارش روزانه: {str(e)}"
+            )
+            return {}
 
 # نمونه استفاده
 if __name__ == "__main__":
