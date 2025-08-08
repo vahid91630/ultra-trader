@@ -10,7 +10,7 @@ bind = f"0.0.0.0:{os.environ.get('PORT', 5000)}"
 backlog = 2048
 
 # Worker processes
-workers = int(os.environ.get('GUNICORN_WORKERS', 1))
+workers = int(os.environ.get('GUNICORN_WORKERS', 2))  # Use 2 workers by default
 worker_class = "sync"
 worker_connections = 1000
 timeout = 120
