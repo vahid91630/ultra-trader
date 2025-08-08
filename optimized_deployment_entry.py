@@ -6,6 +6,8 @@ Optimized for <500MB Docker image and single port deployment
 
 import os
 import json
+import signal
+import sys
 from flask import Flask, jsonify, render_template_string
 
 app = Flask(__name__)
@@ -38,15 +40,17 @@ MINIMAL_TEMPLATE = """
         <h1>🚀 Trading System Dashboard</h1>
         
         <div class="status active">
-            <strong>✅ System Status: ACTIVE</strong>
+            <strong>✅ System Status: ACTIVE (Production Mode)</strong>
         </div>
         
         <div class="status info">
             <strong>🔧 Deployment Mode: Production Ready</strong>
             <br>
-            This is the ultra-minimal deployment optimized for Replit.
+            This is the ultra-minimal deployment optimized for container deployment.
             <br>
             Docker image size: &lt;500MB | Single port configuration: {{ port }}
+            <br>
+            Server: Gunicorn WSGI (Production Mode)
         </div>
         
         <div style="margin-top: 30px;">
@@ -57,6 +61,10 @@ MINIMAL_TEMPLATE = """
             <div class="metric">
                 <div class="metric-label">Status:</div>
                 <div class="metric-value">Ready</div>
+            </div>
+            <div class="metric">
+                <div class="metric-label">Mode:</div>
+                <div class="metric-value">Production</div>
             </div>
         </div>
     </div>
@@ -75,7 +83,8 @@ def health():
     return jsonify({
         "status": "healthy",
         "port": PORT,
-        "deployment": "production_ready"
+        "deployment": "production_ready",
+        "server": "gunicorn_wsgi"
     })
 
 @app.route('/api/status')
@@ -86,9 +95,22 @@ def api_status():
         "deployment": "minimal",
         "docker_optimized": True,
         "port": PORT,
-        "image_size": "<500MB"
+        "image_size": "<500MB",
+        "server_mode": "production"
     })
 
+def signal_handler(sig, frame):
+    """Handle shutdown signals gracefully"""
+    print(f"\n🛑 Received signal {sig}. Shutting down gracefully...")
+    sys.exit(0)
+
 if __name__ == '__main__':
+    # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     print(f"🚀 Starting ultra-minimal deployment on port {PORT}")
-    app.run(host='0.0.0.0', port=PORT, debug=False)
+    print("🔧 Running in production mode with proper signal handling")
+    
+    # Run with better production settings when called directly
+    app.run(host='0.0.0.0', port=PORT, debug=False, threaded=True)

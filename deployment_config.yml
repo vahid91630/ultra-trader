@@ -1,0 +1,25 @@
+# Deployment Configuration
+# Production-ready settings for Ultra-Trader
+
+deployment:
+  mode: production
+  server: gunicorn
+  workers: 1
+  timeout: 120
+  port: 5000
+  
+container:
+  image_size_limit: 500MB
+  health_check_interval: 30s
+  restart_policy: always
+  
+logging:
+  level: info
+  format: "%(asctime)s [%(process)d] [%(levelname)s] %(message)s"
+  
+security:
+  ssl_verification: enabled
+  trusted_hosts:
+    - pypi.org
+    - pypi.python.org
+    - files.pythonhosted.org
