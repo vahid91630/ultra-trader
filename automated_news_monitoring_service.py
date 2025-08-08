@@ -12,6 +12,7 @@ import logging
 import threading
 from datetime import datetime
 from news_api_integration import NewsAPIIntegration, update_intelligence_with_news
+from monitoring.persian_reporter import PersianReporter, SystemComponent, ReportLevel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -27,10 +28,21 @@ class AutomatedNewsMonitoringService:
         self.total_analyses = 0
         self.market_signals = []
         
+        # ایجاد گزارشگر فارسی
+        self.reporter = PersianReporter(
+            SystemComponent.NEWS_MONITORING,
+            log_file="monitoring/logs/news_monitoring_fa.log"
+        )
+        
+        self.reporter.success(
+            "راه‌اندازی سرویس",
+            "سرویس پایش اخبار با گزارشدهی فارسی آماده شد"
+        )
+        
     def run_analysis_cycle(self):
         """اجرای یک چرخه تحلیل"""
         try:
-            logger.info("🔄 شروع چرخه جدید تحلیل اخبار...")
+            self.reporter.info("چرخه تحلیل", "شروع چرخه جدید تحلیل اخبار...")
             
             # تحلیل بازارها
             result = self.news_system.analyze_all_markets()
@@ -46,10 +58,22 @@ class AutomatedNewsMonitoringService:
             # ذخیره وضعیت سرویس
             self.save_service_status(result)
             
-            logger.info(f"✅ چرخه تحلیل {self.total_analyses} کامل شد")
+            self.reporter.success(
+                "تکمیل تحلیل",
+                f"چرخه تحلیل شماره {self.total_analyses} با موفقیت انجام شد",
+                {
+                    'cycle_number': self.total_analyses,
+                    'analysis_time': self.last_analysis.isoformat(),
+                    'signals_generated': len(self.market_signals)
+                }
+            )
             
         except Exception as e:
-            logger.error(f"❌ خطا در چرخه تحلیل: {e}")
+            self.reporter.error(
+                "خطا در تحلیل",
+                f"خطا در چرخه تحلیل: {str(e)}",
+                {'error_type': type(e).__name__, 'cycle_number': self.total_analyses}
+            )
     
     def generate_trading_signals(self, analysis_result):
         """تولید سیگنال‌های معاملاتی بر اساس اخبار"""
@@ -60,39 +84,63 @@ class AutomatedNewsMonitoringService:
         
         # سیگنال‌های کریپتو
         if crypto_sentiment > 0.75:
-            signals.append({
+            signal = {
                 'market': 'crypto',
                 'action': 'BUY',
                 'strength': 'قوی',
                 'sentiment': crypto_sentiment,
                 'reason': 'احساسات بسیار مثبت در اخبار'
-            })
+            }
+            signals.append(signal)
+            self.reporter.success(
+                "سیگنال خرید کریپتو",
+                f"سیگنال خرید قوی تولید شد - احساسات: {crypto_sentiment:.2%}",
+                signal
+            )
         elif crypto_sentiment < 0.25:
-            signals.append({
+            signal = {
                 'market': 'crypto',
                 'action': 'SELL',
                 'strength': 'قوی',
                 'sentiment': crypto_sentiment,
                 'reason': 'احساسات بسیار منفی در اخبار'
-            })
+            }
+            signals.append(signal)
+            self.reporter.warning(
+                "سیگنال فروش کریپتو",
+                f"سیگنال فروش قوی تولید شد - احساسات: {crypto_sentiment:.2%}",
+                signal
+            )
         
         # سیگنال‌های سهام
         if stock_sentiment > 0.75:
-            signals.append({
+            signal = {
                 'market': 'stocks',
                 'action': 'BUY',
                 'strength': 'قوی',
                 'sentiment': stock_sentiment,
                 'reason': 'اخبار مثبت بازار سهام'
-            })
+            }
+            signals.append(signal)
+            self.reporter.success(
+                "سیگنال خرید سهام",
+                f"سیگنال خرید قوی برای سهام - احساسات: {stock_sentiment:.2%}",
+                signal
+            )
         elif stock_sentiment < 0.25:
-            signals.append({
+            signal = {
                 'market': 'stocks',
                 'action': 'SELL',
                 'strength': 'قوی',
                 'sentiment': stock_sentiment,
                 'reason': 'اخبار منفی بازار سهام'
-            })
+            }
+            signals.append(signal)
+            self.reporter.warning(
+                "سیگنال فروش سهام",
+                f"سیگنال فروش قوی برای سهام - احساسات: {stock_sentiment:.2%}",
+                signal
+            )
         
         # ذخیره سیگنال‌ها
         if signals:
@@ -104,7 +152,17 @@ class AutomatedNewsMonitoringService:
                     'total_signals': len(signals)
                 }, f, ensure_ascii=False, indent=2)
             
-            logger.info(f"🎯 {len(signals)} سیگنال معاملاتی تولید شد")
+            self.reporter.info(
+                "ذخیره سیگنال‌ها",
+                f"{len(signals)} سیگنال معاملاتی تولید و ذخیره شد",
+                {'signals_count': len(signals), 'signals': signals}
+            )
+        else:
+            self.reporter.info(
+                "عدم تولید سیگنال",
+                "شرایط بازار مناسب تولید سیگنال نبود",
+                {'crypto_sentiment': crypto_sentiment, 'stock_sentiment': stock_sentiment}
+            )
     
     def save_service_status(self, latest_result):
         """ذخیره وضعیت سرویس"""
@@ -150,7 +208,42 @@ class AutomatedNewsMonitoringService:
     def stop(self):
         """توقف سرویس"""
         self.running = False
+        self.reporter.info("توقف سرویس", "دستور توقف سرویس صادر شد")
         logger.info("🛑 دستور توقف سرویس صادر شد")
+    
+    def create_comprehensive_report(self):
+        """ایجاد گزارش جامع عملکرد سرویس"""
+        try:
+            report_data = {
+                'total_analyses': self.total_analyses,
+                'last_analysis': self.last_analysis.isoformat() if self.last_analysis else None,
+                'active_signals': len(self.market_signals),
+                'service_status': 'فعال' if self.running else 'متوقف',
+                'analysis_interval_minutes': self.analysis_interval // 60
+            }
+            
+            # خواندن آخرین وضعیت
+            try:
+                with open('news_monitoring_status.json', 'r', encoding='utf-8') as f:
+                    status = json.load(f)
+                    report_data.update(status)
+            except FileNotFoundError:
+                pass
+            
+            self.reporter.info(
+                "گزارش جامع سرویس",
+                f"تحلیل‌های انجام شده: {self.total_analyses}، سیگنال‌های فعال: {len(self.market_signals)}",
+                report_data
+            )
+            
+            return report_data
+            
+        except Exception as e:
+            self.reporter.error(
+                "خطا در گزارش",
+                f"خطا در ایجاد گزارش جامع: {str(e)}"
+            )
+            return {}
 
 def integrate_with_trading_systems():
     """اتصال سیگنال‌های اخبار به سیستم‌های معاملاتی"""
