@@ -5,4 +5,4 @@ run:
 	python deployment/main.py
 
 dashboard:
-	python monitoring/fast_dashboard.py
+	gunicorn --bind 0.0.0.0:$${PORT:-5000} fast_dashboard:app
