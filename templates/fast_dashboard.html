@@ -175,6 +175,76 @@
             font-size: 0.9rem;
             color: #00ff88;
         }
+
+        .error-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(244, 67, 54, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            border: 1px solid #F44336;
+            z-index: 1000;
+            display: none;
+        }
+
+        .control-panel {
+            position: fixed;
+            bottom: 80px;
+            left: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .control-btn {
+            background: linear-gradient(45deg, #00ff88, #00cc66);
+            color: #000;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,255,136,0.3);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 30px;
+            color: #ccc;
+            font-style: italic;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .data-change {
+            animation: highlight 1s ease;
+        }
+
+        @keyframes highlight {
+            0% { background-color: rgba(0,255,136,0.3); }
+            100% { background-color: transparent; }
+        }
     </style>
 </head>
 <body>
@@ -283,18 +353,40 @@
         آخرین بروزرسانی: <span id="lastUpdate">در حال بارگذاری...</span>
     </div>
     
+    <div class="error-indicator" id="errorIndicator">
+        ❌ خطا در دریافت داده‌ها
+    </div>
+    
+    <div class="control-panel">
+        <div style="margin-bottom: 10px; font-size: 0.9em; color: #00ff88;">کنترل بروزرسانی</div>
+        <button class="control-btn" id="pauseBtn" onclick="toggleAutoUpdate()">⏸️ توقف</button>
+        <button class="control-btn" id="refreshBtn" onclick="manualRefresh()">🔄 بروزرسانی</button>
+    </div>
+    
     <script>
+        // متغیرهای سراسری برای مدیریت وضعیت
         let updateInterval;
+        let isAutoUpdateActive = true;
+        let errorCount = 0;
+        const MAX_ERROR_COUNT = 3;
         
         function updateDashboard() {
+            hideError();
+            
             fetch('/api/data', {
                 method: 'GET',
                 headers: {
                     'Cache-Control': 'no-cache'
                 }
             })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`خطای HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    errorCount = 0; // ریست کردن شمارش خطاها در صورت موفقیت
                     updateLastUpdate(data.timestamp);
                     updatePersianDateTime(data.persian_datetime);
                     updateExchangeBalance(data.exchange_balance);  // خط اول: موجودی و سود
@@ -306,8 +398,74 @@
                     updateNewsAnalysis(data.news_analysis);
                 })
                 .catch(error => {
-                    // بی‌صدا نادیده بگیر
+                    errorCount++;
+                    console.error('خطا در دریافت داده‌ها:', error);
+                    showError(`خطا در دریافت داده‌ها: ${error.message}`);
+                    
+                    // در صورت تکرار خطا، بروزرسانی خودکار را متوقف کن
+                    if (errorCount >= MAX_ERROR_COUNT) {
+                        pauseAutoUpdate();
+                        showError(`بروزرسانی خودکار متوقف شد (${errorCount} خطای متوالی). دکمه بروزرسانی دستی را استفاده کنید.`);
+                    }
                 });
+        }
+        
+        function showError(message) {
+            const errorIndicator = document.getElementById('errorIndicator');
+            errorIndicator.textContent = `❌ ${message}`;
+            errorIndicator.style.display = 'block';
+            
+            // پنهان کردن خطا بعد از 5 ثانیه
+            setTimeout(hideError, 5000);
+        }
+        
+        function hideError() {
+            document.getElementById('errorIndicator').style.display = 'none';
+        }
+        
+        function toggleAutoUpdate() {
+            if (isAutoUpdateActive) {
+                pauseAutoUpdate();
+            } else {
+                resumeAutoUpdate();
+            }
+        }
+        
+        function pauseAutoUpdate() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            isAutoUpdateActive = false;
+            
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.textContent = '▶️ ادامه';
+            pauseBtn.style.background = 'linear-gradient(45deg, #ffa500, #ff8c00)';
+        }
+        
+        function resumeAutoUpdate() {
+            startUpdates();
+            isAutoUpdateActive = true;
+            errorCount = 0; // ریست کردن شمارش خطاها
+            
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.textContent = '⏸️ توقف';
+            pauseBtn.style.background = 'linear-gradient(45deg, #00ff88, #00cc66)';
+        }
+        
+        function manualRefresh() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const originalText = refreshBtn.textContent;
+            
+            refreshBtn.textContent = '⏳ در حال بروزرسانی...';
+            refreshBtn.disabled = true;
+            
+            updateDashboard();
+            
+            setTimeout(() => {
+                refreshBtn.textContent = originalText;
+                refreshBtn.disabled = false;
+            }, 1000);
         }
         
         function updateLastUpdate(timestamp) {
@@ -322,14 +480,23 @@
         }
         
         function updateExchangeBalance(data) {
-            if (!data) return;
+            if (!data) {
+                // Show default empty state for balance data
+                document.getElementById('current-balance').textContent = '$0.00';
+                document.getElementById('total-profit').textContent = '$0.00';
+                document.getElementById('roi-percentage').textContent = '0.0%';
+                document.getElementById('win-rate').textContent = '0.0%';
+                document.getElementById('total-trades').textContent = '0';
+                document.getElementById('connected-exchanges').textContent = '0/5';
+                return;
+            }
             
-            document.getElementById('current-balance').textContent = data.balance_formatted || '$0.00';
-            document.getElementById('total-profit').textContent = data.profit_formatted || '$0.00';
-            document.getElementById('roi-percentage').textContent = data.roi_formatted || '0.0%';
-            document.getElementById('win-rate').textContent = `${data.win_rate || 0}%`;
-            document.getElementById('total-trades').textContent = data.total_trades || '0';
-            document.getElementById('connected-exchanges').textContent = `${data.connected_exchanges || 0}/${data.total_exchanges || 5}`;
+            updateWithAnimation('current-balance', data.balance_formatted || '$0.00');
+            updateWithAnimation('total-profit', data.profit_formatted || '$0.00');
+            updateWithAnimation('roi-percentage', data.roi_formatted || '0.0%');
+            updateWithAnimation('win-rate', `${data.win_rate || 0}%`);
+            updateWithAnimation('total-trades', data.total_trades || '0');
+            updateWithAnimation('connected-exchanges', `${data.connected_exchanges || 0}/${data.total_exchanges || 5}`);
             
             // رنگ‌بندی بر اساس سود/زیان
             const profitElement = document.getElementById('total-profit');
@@ -347,7 +514,10 @@
         }
         
         function updateSystemResources(data) {
-            if (!data) return;
+            if (!data) {
+                showEmptyState('systemResources', '🖥️', 'اطلاعات منابع سیستم موجود نیست');
+                return;
+            }
             
             const html = `
                 <div class="metric">
@@ -366,11 +536,14 @@
                     <span class="metric-value">${data.disk_used_gb}GB / ${data.disk_total_gb}GB (${data.disk_percent}%)</span>
                 </div>
             `;
-            document.getElementById('systemResources').innerHTML = html;
+            updateWithAnimation('systemResources', html);
         }
         
         function updateApiStatus(data) {
-            if (!data) return;
+            if (!data || Object.keys(data).length === 0) {
+                showEmptyState('apiStatus', '🔗', 'کلیدهای API تنظیم نشده یا اطلاعات موجود نیست');
+                return;
+            }
             
             let html = '';
             Object.entries(data).forEach(([name, info]) => {
@@ -382,31 +555,34 @@
                     </div>
                 `;
             });
-            document.getElementById('apiStatus').innerHTML = html;
+            updateWithAnimation('apiStatus', html);
         }
         
         function updateLearningProgress(data) {
-            if (!data) return;
+            if (!data) {
+                showEmptyState('learningProgress', '🧠', 'سیستم هوش مصنوعی غیرفعال است یا اطلاعات موجود نیست');
+                return;
+            }
             
             let html = `
                 <div class="metric">
                     <span class="metric-label">سطح هوش:</span>
-                    <span class="metric-value status-good">${data.intelligence_level}%</span>
+                    <span class="metric-value status-good">${data.intelligence_level || 0}%</span>
                 </div>
                 <div class="progress-bar">
-                    <div class="progress-fill" style="width: ${data.intelligence_level}%"></div>
+                    <div class="progress-fill" style="width: ${data.intelligence_level || 0}%"></div>
                 </div>
                 <div class="metric">
                     <span class="metric-label">الگوهای یادگرفته:</span>
-                    <span class="metric-value">${data.patterns_learned}</span>
+                    <span class="metric-value">${data.patterns_learned || 0}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">نرخ برد:</span>
-                    <span class="metric-value status-good">${data.win_rate}%</span>
+                    <span class="metric-value status-good">${data.win_rate || 0}%</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">ساعت یادگیری:</span>
-                    <span class="metric-value">${data.learning_hours}</span>
+                    <span class="metric-value">${data.learning_hours || 0}</span>
                 </div>
             `;
             
@@ -420,7 +596,7 @@
                         </div>
                         <div class="metric">
                             <span class="metric-label">افزایش هوش از یافته‌ها:</span>
-                            <span class="metric-value status-good">+${data.findings_boost}%</span>
+                            <span class="metric-value status-good">+${data.findings_boost || 0}%</span>
                         </div>
                 `;
                 
@@ -437,13 +613,18 @@
                 }
                 
                 html += `</div>`;
+            } else if (!data.patterns_learned || data.patterns_learned === 0) {
+                html += '<div class="empty-state" style="padding: 15px;">سیستم در حال شروع یادگیری است...</div>';
             }
             
-            document.getElementById('learningProgress').innerHTML = html;
+            updateWithAnimation('learningProgress', html);
         }
         
         function updateTradingReports(data) {
-            if (!data) return;
+            if (!data) {
+                showEmptyState('tradingReports', '💰', 'اطلاعات معاملاتی موجود نیست یا هنوز معامله‌ای انجام نشده');
+                return;
+            }
             
             const profitClass = data.total_profit_loss > 0 ? 'status-good' : data.total_profit_loss < 0 ? 'status-error' : 'status-warning';
             const winRateClass = data.win_rate > 60 ? 'status-good' : data.win_rate > 40 ? 'status-warning' : 'status-error';
@@ -451,27 +632,30 @@
             const html = `
                 <div class="metric">
                     <span class="metric-label">کل معاملات:</span>
-                    <span class="metric-value">${data.total_trades}</span>
+                    <span class="metric-value">${data.total_trades || 0}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">نرخ برد:</span>
-                    <span class="metric-value ${winRateClass}">${data.win_rate}%</span>
+                    <span class="metric-value ${winRateClass}">${data.win_rate || 0}%</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">سود/زیان کل:</span>
-                    <span class="metric-value ${profitClass}">$${data.total_profit_loss}</span>
+                    <span class="metric-value ${profitClass}">$${data.total_profit_loss || 0}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">بزرگ‌ترین برد:</span>
-                    <span class="metric-value status-good">$${data.largest_win}</span>
+                    <span class="metric-value status-good">$${data.largest_win || 0}</span>
                 </div>
-                ${data.total_trades === 0 ? '<div style="text-align: center; color: #ffa500; margin-top: 15px;">هنوز معامله‌ای انجام نشده</div>' : ''}
+                ${(!data.total_trades || data.total_trades === 0) ? '<div style="text-align: center; color: #ffa500; margin-top: 15px;">هنوز معامله‌ای انجام نشده - ربات در حال تحلیل بازار</div>' : ''}
             `;
-            document.getElementById('tradingReports').innerHTML = html;
+            updateWithAnimation('tradingReports', html);
         }
         
         function updateExchangeStatus(data) {
-            if (!data) return;
+            if (!data || Object.keys(data).length === 0) {
+                showEmptyState('exchangeStatus', '🏪', 'هیچ صرافی متصل نیست یا اطلاعات صرافی موجود نیست');
+                return;
+            }
             
             let html = '';
             Object.entries(data).forEach(([name, info]) => {
@@ -483,11 +667,14 @@
                     </div>
                 `;
             });
-            document.getElementById('exchangeStatus').innerHTML = html;
+            updateWithAnimation('exchangeStatus', html);
         }
         
         function updateNewsAnalysis(data) {
-            if (!data) return;
+            if (!data) {
+                showEmptyState('newsAnalysis', '📰', 'سرویس تحلیل اخبار غیرفعال است یا اطلاعات موجود نیست');
+                return;
+            }
             
             const cryptoClass = data.crypto_sentiment > 60 ? 'status-good' : data.crypto_sentiment > 40 ? 'status-warning' : 'status-error';
             const stockClass = data.stock_sentiment > 60 ? 'status-good' : data.stock_sentiment > 40 ? 'status-warning' : 'status-error';
@@ -495,22 +682,62 @@
             const html = `
                 <div class="metric">
                     <span class="metric-label">احساسات کریپتو:</span>
-                    <span class="metric-value ${cryptoClass}">${data.crypto_sentiment}%</span>
+                    <span class="metric-value ${cryptoClass}">${data.crypto_sentiment || 0}%</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">احساسات سهام:</span>
-                    <span class="metric-value ${stockClass}">${data.stock_sentiment}%</span>
+                    <span class="metric-value ${stockClass}">${data.stock_sentiment || 0}%</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">اخبار تحلیل شده:</span>
-                    <span class="metric-value">${data.news_count}</span>
+                    <span class="metric-value">${data.news_count || 0}</span>
                 </div>
                 <div class="metric">
                     <span class="metric-label">سیگنال‌های فعال:</span>
-                    <span class="metric-value">${data.active_signals}</span>
+                    <span class="metric-value">${data.active_signals || 0}</span>
+                </div>
+                ${(!data.news_count || data.news_count === 0) ? '<div class="empty-state" style="padding: 15px;">در انتظار دریافت اخبار...</div>' : ''}
+            `;
+            updateWithAnimation('newsAnalysis', html);
+        }
+        
+        // Helper functions for animations and empty states
+        function updateWithAnimation(elementIdOrSelector, content) {
+            const element = typeof elementIdOrSelector === 'string' && elementIdOrSelector.startsWith('#') ? 
+                document.querySelector(elementIdOrSelector) : 
+                document.getElementById(elementIdOrSelector);
+            
+            if (!element) return;
+            
+            const previousContent = element.innerHTML || element.textContent;
+            
+            if (previousContent !== content) {
+                element.classList.add('data-change');
+                
+                if (element.tagName === 'SPAN' || element.tagName === 'DIV' && !element.innerHTML.includes('<')) {
+                    element.textContent = content;
+                } else {
+                    element.innerHTML = content;
+                }
+                
+                // Remove animation class after animation completes
+                setTimeout(() => {
+                    element.classList.remove('data-change');
+                }, 1000);
+            }
+        }
+        
+        function showEmptyState(elementId, icon, message) {
+            const html = `
+                <div class="empty-state">
+                    <div class="empty-state-icon">${icon}</div>
+                    <div>${message}</div>
+                    <div style="margin-top: 10px; font-size: 0.8em; color: #999;">
+                        لطفاً اتصال شبکه و تنظیمات سیستم را بررسی کنید
+                    </div>
                 </div>
             `;
-            document.getElementById('newsAnalysis').innerHTML = html;
+            document.getElementById(elementId).innerHTML = html;
         }
         
         function startUpdates() {
@@ -538,12 +765,14 @@
             }
         });
         
-        // حذف خطاها
+        // مدیریت خطاهای غیرمنتظره
         window.addEventListener('unhandledrejection', function(event) {
+            console.warn('Promise rejection:', event.reason);
             event.preventDefault();
         });
         
         window.addEventListener('error', function(event) {
+            console.warn('Global error:', event.error);
             event.preventDefault();
         });
         

@@ -349,19 +349,31 @@ class DailyDataCollectionSystem:
         logger.info("📋 خلاصه روزانه آماده شد")
     
     def transfer_to_mongodb(self):
-        """انتقال داده‌ها به MongoDB در پایان شب"""
+        """انتقال داده‌ها به MongoDB در پایان شب با مدیریت بهتر خطا"""
         logger.info("🌙 شروع انتقال داده‌ها به MongoDB...")
         
         # بررسی اتصال MongoDB
-        mongodb_uri = os.environ.get('MONGODB_URI')
+        mongodb_uri = os.environ.get('MONGODB_URI') or os.environ.get('MONGO_URI')
         if not mongodb_uri:
-            logger.warning("⚠️ MongoDB URI تنظیم نشده - ذخیره در صف")
-            self._save_to_queue()
+            logger.error("❌ هیچ‌کدام از متغیرهای MONGODB_URI یا MONGO_URI تنظیم نشده")
+            logger.info("💡 برای تنظیم متغیر محیطی:")
+            logger.info("   - MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/database")
+            logger.info("   - یا MONGO_URI=mongodb://localhost:27017/ultra_trader")
+            logger.info("   - یا در فایل .env تنظیم کنید")
+            self._save_to_queue("متغیر محیطی MongoDB تنظیم نشده")
             return
         
         try:
             from pymongo import MongoClient
-            client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=5000)
+            from pymongo.errors import ServerSelectionTimeoutError, ConfigurationError
+            
+            logger.info("🔌 در حال اتصال به MongoDB...")
+            client = MongoClient(mongodb_uri, serverSelectionTimeoutMS=10000)
+            
+            # تست اتصال
+            client.admin.command('ping')
+            logger.info("✅ اتصال MongoDB برقرار شد")
+            
             db = client['ultra_plus_bot']
             
             # انتقال خلاصه‌های روزانه
@@ -386,23 +398,31 @@ class DailyDataCollectionSystem:
                         'final_score': summary[3],
                         'recommendation': summary[4],
                         'analysis': json.loads(summary[5]),
-                        'created_at': datetime.now()
+                        'created_at': datetime.now(),
+                        'transfer_timestamp': datetime.now().isoformat()
                     }
                     documents.append(doc)
                 
                 # درج در MongoDB
                 collection = db['daily_analysis']
-                result = collection.insert_many(documents, ordered=False)
-                
-                # علامت‌گذاری انتقال موفق
-                for summary in summaries:
-                    cursor.execute('''
-                        UPDATE daily_summaries SET transferred_to_mongodb = 1
-                        WHERE id = ?
-                    ''', (summary[0],))
-                
-                conn.commit()
-                logger.info(f"✅ {len(result.inserted_ids)} سند به MongoDB منتقل شد")
+                try:
+                    result = collection.insert_many(documents, ordered=False)
+                    logger.info(f"✅ {len(result.inserted_ids)} سند به MongoDB منتقل شد")
+                    
+                    # علامت‌گذاری انتقال موفق
+                    for summary in summaries:
+                        cursor.execute('''
+                            UPDATE daily_summaries SET transferred_to_mongodb = 1
+                            WHERE id = ?
+                        ''', (summary[0],))
+                    
+                    conn.commit()
+                    
+                except Exception as insert_error:
+                    logger.error(f"❌ خطا در درج داده‌ها: {insert_error}")
+                    self._save_to_queue(f"خطا در درج: {str(insert_error)}")
+            else:
+                logger.info("ℹ️ هیچ داده‌ای برای انتقال موجود نیست")
             
             # پاکسازی داده‌های موقت
             self._cleanup_temp_data()
@@ -410,12 +430,35 @@ class DailyDataCollectionSystem:
             client.close()
             conn.close()
             
+        except ImportError:
+            logger.error("❌ کتابخانه pymongo نصب نیست")
+            logger.info("💡 برای نصب: pip install pymongo")
+            self._save_to_queue("pymongo نصب نیست")
+            
+        except ServerSelectionTimeoutError as e:
+            logger.error(f"🕐 Timeout در اتصال به MongoDB: {e}")
+            logger.info("💡 بررسی کنید:")
+            logger.info("   - اتصال اینترنت")
+            logger.info("   - دسترسی به سرور MongoDB")
+            logger.info("   - صحت آدرس سرور")
+            self._save_to_queue(f"Timeout اتصال: {str(e)}")
+            
+        except ConfigurationError as e:
+            logger.error(f"⚙️ خطای پیکربندی MongoDB: {e}")
+            logger.info("💡 بررسی کنید:")
+            logger.info("   - فرمت URI صحیح باشد")
+            logger.info("   - نام کاربری و رمز عبور")
+            self._save_to_queue(f"خطای پیکربندی: {str(e)}")
+            
         except Exception as e:
-            logger.error(f"❌ خطا در انتقال به MongoDB: {e}")
-            self._save_to_queue()
+            logger.error(f"❌ خطای غیرمنتظره در انتقال به MongoDB: {e}")
+            logger.info(f"🔧 جزئیات: نوع خطا {type(e).__name__}")
+            self._save_to_queue(f"خطای غیرمنتظره: {str(e)}")
     
-    def _save_to_queue(self):
-        """ذخیره در صف برای انتقال بعدی"""
+    def _save_to_queue(self, error_reason="خطای نامشخص"):
+        """ذخیره در صف برای انتقال بعدی با اطلاعات بیشتر"""
+        logger.info(f"💾 ذخیره داده‌ها در صف (دلیل: {error_reason})")
+        
         conn = sqlite3.connect(self.analysis_db)
         cursor = conn.cursor()
         
@@ -426,9 +469,15 @@ class DailyDataCollectionSystem:
         
         summaries = cursor.fetchall()
         
-        queue_data = []
+        queue_data = {
+            'error_reason': error_reason,
+            'timestamp': datetime.now().isoformat(),
+            'retry_count': 0,
+            'data': []
+        }
+        
         for summary in summaries:
-            queue_data.append({
+            queue_data['data'].append({
                 'date': summary[1],
                 'symbol': summary[2],
                 'final_score': summary[3],
@@ -436,11 +485,26 @@ class DailyDataCollectionSystem:
                 'analysis': json.loads(summary[5])
             })
         
-        # ذخیره در فایل JSON
+        # خواندن صف قدیمی و اضافه کردن به آن
+        try:
+            with open(self.mongodb_queue, 'r', encoding='utf-8') as f:
+                existing_queue = json.load(f)
+                if isinstance(existing_queue, list):
+                    # فرمت قدیمی - تبدیل به فرمت جدید
+                    queue_data['data'].extend(existing_queue)
+                elif isinstance(existing_queue, dict):
+                    # فرمت جدید - اضافه کردن داده‌ها
+                    queue_data['data'].extend(existing_queue.get('data', []))
+                    queue_data['retry_count'] = existing_queue.get('retry_count', 0) + 1
+        except (FileNotFoundError, json.JSONDecodeError):
+            # فایل وجود ندارد یا فرمت اشتباه - ادامه با داده‌های جدید
+            pass
+        
+        # ذخیره صف بروزرسانی شده
         with open(self.mongodb_queue, 'w', encoding='utf-8') as f:
             json.dump(queue_data, f, ensure_ascii=False, indent=2)
         
-        logger.info(f"💾 {len(queue_data)} رکورد در صف MongoDB ذخیره شد")
+        logger.info(f"💾 {len(queue_data['data'])} رکورد در صف MongoDB ذخیره شد (تلاش #{queue_data['retry_count']})")
         conn.close()
     
     def _cleanup_temp_data(self):
