@@ -15,9 +15,23 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 import requests
 import asyncio
-from openai import OpenAI
+try:
+    from openai import OpenAI
+except ImportError:
+    # Fallback for environments without OpenAI
+    class MockOpenAI:
+        def __init__(self, **kwargs):
+            pass
+    OpenAI = MockOpenAI
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('learning_optimizer.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 class IntelligentLearningOptimizer:
@@ -104,13 +118,69 @@ class IntelligentLearningOptimizer:
         logger.info("✅ دیتابیس بهینه‌ساز آماده شد")
     
     def _setup_openai(self):
-        """تنظیم OpenAI برای تحلیل هوشمند"""
+        """تنظیم OpenAI برای تحلیل هوشمند با مدیریت خطا بهتر"""
         api_key = os.getenv('OPENAI_API_KEY')
         if api_key:
-            self.openai_client = OpenAI(api_key=api_key)
-            logger.info("✅ OpenAI برای تحلیل هوشمند آماده شد")
+            try:
+                self.openai_client = OpenAI(api_key=api_key)
+                # تست اتصال
+                self._test_openai_connection()
+                logger.info("✅ OpenAI برای تحلیل هوشمند آماده شد")
+            except Exception as e:
+                logger.warning(f"⚠️ خطا در تنظیم OpenAI: {e}")
+                self.openai_client = None
         else:
-            logger.warning("⚠️ OpenAI API key یافت نشد")
+            logger.warning("⚠️ OpenAI API key یافت نشد - قابلیت‌های تحلیل هوشمند محدود خواهد بود")
+            self.openai_client = None
+    
+    def _test_openai_connection(self):
+        """تست اتصال OpenAI"""
+        if self.openai_client:
+            try:
+                # تست ساده با یک درخواست کوچک
+                response = self.openai_client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[{"role": "user", "content": "Test"}],
+                    max_tokens=5
+                )
+                logger.debug("OpenAI connection test successful")
+                return True
+            except Exception as e:
+                logger.warning(f"OpenAI connection test failed: {e}")
+                self.openai_client = None
+                return False
+        return False
+    
+    def _use_openai_for_analysis(self, data: Dict[str, Any]) -> Optional[str]:
+        """استفاده از OpenAI برای تحلیل با مدیریت خطا"""
+        if not self.openai_client:
+            return None
+        
+        try:
+            prompt = f"""
+            تحلیل داده‌های یادگیری زیر و پیشنهادات بهبود ارائه بده:
+            
+            سطح هوش: {data.get('intelligence_level', 0)}%
+            تعداد الگوها: {data.get('patterns_learned', 0)}
+            دقت: {data.get('prediction_accuracy', 0)}%
+            
+            لطفاً پیشنهادات کوتاه و عملی ارائه بده.
+            """
+            
+            response = self.openai_client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=200,
+                temperature=0.3
+            )
+            
+            analysis = response.choices[0].message.content
+            logger.info("تحلیل OpenAI دریافت شد")
+            return analysis
+            
+        except Exception as e:
+            logger.warning(f"خطا در تحلیل OpenAI: {e}")
+            return None
     
     def analyze_learning_performance(self) -> Dict[str, Any]:
         """تحلیل عملکرد یادگیری فعلی"""

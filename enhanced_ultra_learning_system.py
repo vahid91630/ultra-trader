@@ -14,7 +14,18 @@ import multiprocessing
 import concurrent.futures
 import time
 import logging
-import numpy as np
+try:
+    import numpy as np
+except ImportError:
+    # Fallback for environments without numpy
+    class MockNumpy:
+        def random(self):
+            import random
+            return random.random()
+        def array(self, data):
+            return data
+    np = MockNumpy()
+
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
@@ -24,7 +35,14 @@ import hashlib
 import pickle
 import random
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('ultra_learning.log', encoding='utf-8'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -77,83 +95,205 @@ class EnhancedUltraLearningEngine:
     
     def _initialize_enhanced_db(self):
         """ایجاد دیتابیس تقویت‌شده با بهینه‌سازی‌های پیشرفته"""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        
-        # فعال‌سازی WAL mode برای بهتر performance
-        cursor.execute('PRAGMA journal_mode=WAL')
-        cursor.execute('PRAGMA synchronous=NORMAL')
-        cursor.execute('PRAGMA cache_size=10000')
-        cursor.execute('PRAGMA temp_store=MEMORY')
-        
-        # جدول الگوهای تقویت‌شده
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS enhanced_patterns (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                pattern_hash TEXT UNIQUE,
-                pattern_data BLOB,
-                confidence REAL,
-                success_rate REAL,
-                learning_speed REAL,
-                usage_frequency INTEGER DEFAULT 1,
-                last_used REAL,
-                created_at REAL,
-                category TEXT,
-                source TEXT,
-                effectiveness_score REAL
-            )
-        ''')
-        
-        # جدول هوش تقویت‌شده
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS enhanced_intelligence (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp REAL,
-                intelligence_level REAL,
-                patterns_count INTEGER,
-                learning_rate REAL,
-                adaptation_speed REAL,
-                decision_accuracy REAL,
-                source_diversity INTEGER
-            )
-        ''')
-        
-        # جدول سرعت یادگیری
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS learning_performance (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                session_id TEXT,
-                start_time REAL,
-                end_time REAL,
-                patterns_learned INTEGER,
-                speed_multiplier REAL,
-                efficiency_score REAL,
-                worker_count INTEGER
-            )
-        ''')
-        
-        # جدول منابع یادگیری
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS learning_sources (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                source_name TEXT,
-                data_type TEXT,
-                quality_score REAL,
-                usage_count INTEGER,
-                last_accessed REAL,
-                reliability_score REAL
-            )
-        ''')
-        
-        # ایجاد ایندکس‌های بهینه‌شده
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_pattern_hash ON enhanced_patterns(pattern_hash)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_confidence ON enhanced_patterns(confidence)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_effectiveness ON enhanced_patterns(effectiveness_score)')
-        cursor.execute('CREATE INDEX IF NOT EXISTS idx_timestamp ON enhanced_intelligence(timestamp)')
-        
-        conn.commit()
-        conn.close()
-        logger.info("✅ دیتابیس تقویت‌شده آماده شد")
+        try:
+            # ایجاد backup قبل از تغییرات
+            self._backup_database()
+            
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # فعال‌سازی WAL mode برای بهتر performance
+            cursor.execute('PRAGMA journal_mode=WAL')
+            cursor.execute('PRAGMA synchronous=NORMAL')
+            cursor.execute('PRAGMA cache_size=10000')
+            cursor.execute('PRAGMA temp_store=MEMORY')
+            cursor.execute('PRAGMA foreign_keys=ON')
+            
+            # جدول الگوهای تقویت‌شده
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS enhanced_patterns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    pattern_hash TEXT UNIQUE,
+                    pattern_data BLOB,
+                    confidence REAL CHECK(confidence >= 0 AND confidence <= 1),
+                    success_rate REAL CHECK(success_rate >= 0 AND success_rate <= 1),
+                    learning_speed REAL,
+                    usage_frequency INTEGER DEFAULT 1,
+                    last_used REAL,
+                    created_at REAL,
+                    category TEXT NOT NULL,
+                    source TEXT NOT NULL,
+                    effectiveness_score REAL CHECK(effectiveness_score >= 0 AND effectiveness_score <= 1),
+                    validation_status TEXT DEFAULT 'pending',
+                    quality_metrics TEXT,
+                    last_updated REAL DEFAULT (strftime('%s', 'now'))
+                )
+            ''')
+            
+            # جدول هوش تقویت‌شده
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS enhanced_intelligence (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp REAL NOT NULL,
+                    intelligence_level REAL CHECK(intelligence_level >= 0 AND intelligence_level <= 100),
+                    patterns_count INTEGER,
+                    learning_rate REAL,
+                    adaptation_speed REAL,
+                    decision_accuracy REAL,
+                    source_diversity INTEGER,
+                    quality_score REAL,
+                    performance_metrics TEXT
+                )
+            ''')
+            
+            # جدول سرعت یادگیری
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS learning_performance (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    session_id TEXT NOT NULL,
+                    start_time REAL NOT NULL,
+                    end_time REAL,
+                    patterns_learned INTEGER,
+                    speed_multiplier REAL,
+                    efficiency_score REAL,
+                    worker_count INTEGER,
+                    success_patterns INTEGER DEFAULT 0,
+                    failed_patterns INTEGER DEFAULT 0,
+                    average_quality REAL
+                )
+            ''')
+            
+            # جدول منابع یادگیری
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS learning_sources (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_name TEXT UNIQUE NOT NULL,
+                    data_type TEXT,
+                    quality_score REAL,
+                    usage_count INTEGER DEFAULT 0,
+                    last_accessed REAL,
+                    reliability_score REAL,
+                    active_status INTEGER DEFAULT 1,
+                    configuration TEXT
+                )
+            ''')
+            
+            # جدول log عملیات
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS operation_logs (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    timestamp REAL DEFAULT (strftime('%s', 'now')),
+                    operation_type TEXT NOT NULL,
+                    details TEXT,
+                    success INTEGER,
+                    execution_time REAL,
+                    error_message TEXT
+                )
+            ''')
+            
+            # ایجاد ایندکس‌های بهینه‌شده
+            indexes = [
+                'CREATE INDEX IF NOT EXISTS idx_pattern_hash ON enhanced_patterns(pattern_hash)',
+                'CREATE INDEX IF NOT EXISTS idx_confidence ON enhanced_patterns(confidence DESC)',
+                'CREATE INDEX IF NOT EXISTS idx_effectiveness ON enhanced_patterns(effectiveness_score DESC)',
+                'CREATE INDEX IF NOT EXISTS idx_timestamp ON enhanced_intelligence(timestamp DESC)',
+                'CREATE INDEX IF NOT EXISTS idx_category ON enhanced_patterns(category)',
+                'CREATE INDEX IF NOT EXISTS idx_source ON enhanced_patterns(source)',
+                'CREATE INDEX IF NOT EXISTS idx_created_at ON enhanced_patterns(created_at DESC)',
+                'CREATE INDEX IF NOT EXISTS idx_session_id ON learning_performance(session_id)',
+                'CREATE INDEX IF NOT EXISTS idx_source_name ON learning_sources(source_name)',
+                'CREATE INDEX IF NOT EXISTS idx_operation_type ON operation_logs(operation_type, timestamp DESC)'
+            ]
+            
+            for index_query in indexes:
+                cursor.execute(index_query)
+            
+            conn.commit()
+            
+            # تست سلامت دیتابیس
+            cursor.execute('PRAGMA integrity_check')
+            integrity_result = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            if integrity_result == 'ok':
+                logger.info("✅ دیتابیس تقویت‌شده با موفقیت آماده شد")
+                self._log_operation('database_init', 'دیتابیس با موفقیت راه‌اندازی شد', True)
+            else:
+                logger.error(f"خطا در integrity دیتابیس: {integrity_result}")
+                
+        except Exception as e:
+            logger.error(f"خطا در راه‌اندازی دیتابیس: {e}")
+            self._log_operation('database_init', f'خطا در راه‌اندازی: {e}', False)
+            # در صورت خطا، سعی در restore از backup
+            self._restore_from_backup()
+    
+    def _backup_database(self):
+        """ایجاد backup از دیتابیس"""
+        try:
+            if os.path.exists(self.db_path):
+                backup_path = f"{self.db_path}.backup_{int(time.time())}"
+                import shutil
+                shutil.copy2(self.db_path, backup_path)
+                logger.info(f"Backup دیتابیس ایجاد شد: {backup_path}")
+                
+                # نگهداری تنها 5 backup اخیر
+                self._cleanup_old_backups()
+                
+        except Exception as e:
+            logger.warning(f"خطا در ایجاد backup: {e}")
+    
+    def _cleanup_old_backups(self):
+        """پاکسازی backup های قدیمی"""
+        try:
+            import glob
+            backup_pattern = f"{self.db_path}.backup_*"
+            backup_files = glob.glob(backup_pattern)
+            backup_files.sort(key=os.path.getmtime, reverse=True)
+            
+            # حذف backup های بیش از 5 عدد
+            for backup_file in backup_files[5:]:
+                os.remove(backup_file)
+                logger.debug(f"Backup قدیمی حذف شد: {backup_file}")
+                
+        except Exception as e:
+            logger.warning(f"خطا در پاکسازی backup ها: {e}")
+    
+    def _restore_from_backup(self):
+        """بازیابی از آخرین backup"""
+        try:
+            import glob
+            backup_pattern = f"{self.db_path}.backup_*"
+            backup_files = glob.glob(backup_pattern)
+            
+            if backup_files:
+                latest_backup = max(backup_files, key=os.path.getmtime)
+                import shutil
+                shutil.copy2(latest_backup, self.db_path)
+                logger.info(f"دیتابیس از backup بازیابی شد: {latest_backup}")
+            else:
+                logger.warning("هیچ backup برای بازیابی یافت نشد")
+                
+        except Exception as e:
+            logger.error(f"خطا در بازیابی از backup: {e}")
+    
+    def _log_operation(self, operation_type: str, details: str, success: bool, execution_time: float = None):
+        """ثبت log عملیات"""
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            cursor.execute('''
+                INSERT INTO operation_logs 
+                (operation_type, details, success, execution_time)
+                VALUES (?, ?, ?, ?)
+            ''', (operation_type, details, 1 if success else 0, execution_time))
+            
+            conn.commit()
+            conn.close()
+            
+        except Exception as e:
+            logger.debug(f"خطا در ثبت log: {e}")
     
     def _load_existing_patterns(self):
         """بارگذاری الگوهای موجود از منابع مختلف"""
@@ -223,44 +363,94 @@ class EnhancedUltraLearningEngine:
         """استخراج الگوها از داده‌های JSON"""
         patterns_extracted = 0
         
-        # استخراج از یافته‌های علمی
-        if 'scientific_findings' in data:
-            findings = data['scientific_findings']
-            for finding in findings:
-                pattern_data = {
-                    'type': 'scientific_finding',
-                    'category': finding.get('category', 'general'),
-                    'description': finding.get('description', ''),
-                    'accuracy': finding.get('accuracy_percentage', 50)
-                }
-                
-                self._store_enhanced_pattern(
-                    pattern_data=pickle.dumps(pattern_data),
-                    confidence=finding.get('accuracy_percentage', 50) / 100,
-                    source=source_file,
-                    category='scientific'
-                )
-                patterns_extracted += 1
-        
-        # استخراج از تکنیک‌های یادگرفته
-        if 'techniques_mastered' in data:
-            for i in range(data['techniques_mastered']):
-                pattern_data = {
-                    'type': 'trading_technique',
-                    'index': i,
-                    'mastery_level': 'high'
-                }
-                
-                self._store_enhanced_pattern(
-                    pattern_data=pickle.dumps(pattern_data),
-                    confidence=0.8,
-                    source=source_file,
-                    category='technique'
-                )
-                patterns_extracted += 1
-        
-        self.patterns_learned += patterns_extracted
-        logger.info(f"📖 {patterns_extracted} الگو از {source_file} استخراج شد")
+        try:
+            # استخراج از یافته‌های علمی
+            if 'scientific_findings' in data:
+                findings = data['scientific_findings']
+                if isinstance(findings, dict):
+                    # اگر findings یک dict است
+                    for i in range(findings.get('total_findings', 0)):
+                        pattern_data = {
+                            'type': 'scientific_finding',
+                            'category': 'scientific',
+                            'description': f'Scientific finding {i+1}',
+                            'accuracy': findings.get('avg_accuracy', 50),
+                            'timestamp': time.time()
+                        }
+                        
+                        if self._store_enhanced_pattern(
+                            pattern_data=pickle.dumps(pattern_data),
+                            confidence=findings.get('avg_accuracy', 50) / 100,
+                            source=source_file,
+                            category='scientific'
+                        ):
+                            patterns_extracted += 1
+                elif isinstance(findings, list):
+                    # اگر findings یک لیست است
+                    for finding in findings:
+                        if isinstance(finding, dict):
+                            pattern_data = {
+                                'type': 'scientific_finding',
+                                'category': finding.get('category', 'general'),
+                                'description': finding.get('description', ''),
+                                'accuracy': finding.get('accuracy_percentage', 50),
+                                'timestamp': time.time()
+                            }
+                            
+                            if self._store_enhanced_pattern(
+                                pattern_data=pickle.dumps(pattern_data),
+                                confidence=finding.get('accuracy_percentage', 50) / 100,
+                                source=source_file,
+                                category='scientific'
+                            ):
+                                patterns_extracted += 1
+            
+            # استخراج از تکنیک‌های یادگرفته
+            if 'techniques_mastered' in data:
+                techniques_count = data['techniques_mastered']
+                if isinstance(techniques_count, int):
+                    for i in range(min(techniques_count, 50)):  # محدود کردن برای جلوگیری از spam
+                        pattern_data = {
+                            'type': 'trading_technique',
+                            'index': i,
+                            'mastery_level': 'high',
+                            'timestamp': time.time()
+                        }
+                        
+                        if self._store_enhanced_pattern(
+                            pattern_data=pickle.dumps(pattern_data),
+                            confidence=0.8,
+                            source=source_file,
+                            category='technique'
+                        ):
+                            patterns_extracted += 1
+            
+            # استخراج از acceleration history
+            if 'acceleration_history' in data:
+                history = data['acceleration_history']
+                if isinstance(history, list):
+                    for record in history[-10:]:  # فقط 10 رکورد اخیر
+                        if isinstance(record, dict):
+                            pattern_data = {
+                                'type': 'acceleration_record',
+                                'cycle_id': record.get('cycle_id', ''),
+                                'improvements': record.get('improvements', {}),
+                                'timestamp': time.time()
+                            }
+                            
+                            if self._store_enhanced_pattern(
+                                pattern_data=pickle.dumps(pattern_data),
+                                confidence=0.75,
+                                source=source_file,
+                                category='performance'
+                            ):
+                                patterns_extracted += 1
+            
+            self.patterns_learned += patterns_extracted
+            logger.info(f"📖 {patterns_extracted} الگو از {source_file} استخراج شد")
+            
+        except Exception as e:
+            logger.error(f"خطا در استخراج الگو از {source_file}: {e}")
     
     def _load_from_external_sources(self):
         """بارگذاری از منابع خارجی"""
@@ -387,14 +577,77 @@ class EnhancedUltraLearningEngine:
         except Exception as e:
             logger.error(f"خطا در بارگذاری الگوهای تاریخی: {e}")
     
+    def _validate_pattern_quality(self, pattern_data: Dict[str, Any], confidence: float) -> bool:
+        """اعتبارسنجی کیفیت الگو"""
+        try:
+            # بررسی حداقل confidence - کاهش threshold برای acceptance بیشتر
+            if confidence < 0.5:
+                logger.debug(f"الگو رد شد: confidence پایین ({confidence})")
+                return False
+            
+            # بررسی ساختار داده‌های الگو
+            if not isinstance(pattern_data, dict):
+                logger.debug("الگو رد شد: ساختار نامعتبر")
+                return False
+            
+            # بررسی وجود فیلدهای ضروری
+            required_fields = ['type']
+            for field in required_fields:
+                if field not in pattern_data:
+                    logger.debug(f"الگو رد شد: فیلد {field} موجود نیست")
+                    return False
+            
+            # بررسی نوع الگو - اضافه کردن انواع بیشتر
+            valid_types = [
+                'market', 'technical', 'sentiment', 'risk', 'strategy', 'news', 'crypto_real',
+                'scientific_finding', 'trading_technique', 'acceleration_record', 'performance',
+                'pattern_recognition', 'market_psychology', 'ai_algorithms', 'risk_management'
+            ]
+            if pattern_data.get('type') not in valid_types:
+                logger.debug(f"الگو رد شد: نوع نامعتبر ({pattern_data.get('type')})")
+                return False
+            
+            # بررسی زمان - انعطاف بیشتر برای زمان
+            current_time = time.time()
+            pattern_time = pattern_data.get('timestamp', current_time)
+            if abs(current_time - pattern_time) > 864000:  # 10 روز به جای 1 روز
+                logger.debug("الگو رد شد: زمان نامعتبر")
+                return False
+            
+            logger.debug(f"الگو معتبر: type={pattern_data.get('type')}, confidence={confidence}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"خطا در اعتبارسنجی الگو: {e}")
+            return False
+
     def _store_enhanced_pattern(self, pattern_data: bytes, confidence: float, 
                               source: str, category: str = 'general'):
-        """ذخیره الگوی تقویت‌شده"""
+        """ذخیره الگوی تقویت‌شده با اعتبارسنجی"""
         try:
+            # تبدیل pattern_data برای اعتبارسنجی
+            try:
+                pattern_dict = pickle.loads(pattern_data)
+            except:
+                pattern_dict = {'type': category, 'timestamp': time.time()}
+            
+            # اعتبارسنجی کیفیت الگو
+            if not self._validate_pattern_quality(pattern_dict, confidence):
+                logger.warning(f"الگو از منبع {source} رد شد: کیفیت نامناسب")
+                return False
+            
             pattern_hash = hashlib.md5(pattern_data).hexdigest()
+            
+            # بررسی تکراری بودن
+            if self._is_duplicate_pattern(pattern_hash):
+                logger.debug(f"الگو تکراری از منبع {source}")
+                return False
             
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
+            
+            # محاسبه نمره اثربخشی
+            effectiveness_score = self._calculate_effectiveness_score(pattern_dict, confidence, source)
             
             cursor.execute('''
                 INSERT OR REPLACE INTO enhanced_patterns 
@@ -404,7 +657,7 @@ class EnhancedUltraLearningEngine:
             ''', (
                 pattern_hash, pattern_data, confidence, confidence * 0.9,
                 self.metrics.learning_rate, 1, time.time(), time.time(),
-                category, source, confidence * 0.95
+                category, source, effectiveness_score
             ))
             
             conn.commit()
@@ -415,11 +668,80 @@ class EnhancedUltraLearningEngine:
                 'hash': pattern_hash,
                 'confidence': confidence,
                 'category': category,
-                'source': source
+                'source': source,
+                'effectiveness': effectiveness_score
             })
+            
+            # آمار دقیق‌تر
+            logger.info(f"الگوی جدید ذخیره شد: {category} از {source} با confidence {confidence:.2f}")
+            
+            return True
             
         except Exception as e:
             logger.error(f"خطا در ذخیره الگو: {e}")
+            return False
+    
+    def _is_duplicate_pattern(self, pattern_hash: str) -> bool:
+        """بررسی تکراری بودن الگو"""
+        try:
+            # بررسی در کش
+            for cached_pattern in self.pattern_cache:
+                if cached_pattern['hash'] == pattern_hash:
+                    return True
+            
+            # بررسی در دیتابیس
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            cursor.execute('SELECT COUNT(*) FROM enhanced_patterns WHERE pattern_hash = ?', (pattern_hash,))
+            count = cursor.fetchone()[0]
+            conn.close()
+            
+            return count > 0
+            
+        except Exception as e:
+            logger.error(f"خطا در بررسی تکرار: {e}")
+            return False
+    
+    def _calculate_effectiveness_score(self, pattern_dict: Dict[str, Any], confidence: float, source: str) -> float:
+        """محاسبه نمره اثربخشی الگو"""
+        try:
+            base_score = confidence
+            
+            # امتیاز بر اساس نوع الگو
+            type_scores = {
+                'crypto_real': 0.95,
+                'market': 0.85,
+                'technical': 0.80,
+                'sentiment': 0.75,
+                'risk': 0.70,
+                'strategy': 0.85,
+                'news': 0.75
+            }
+            
+            type_bonus = type_scores.get(pattern_dict.get('type', 'general'), 0.5)
+            
+            # امتیاز بر اساس منبع
+            source_scores = {
+                'coingecko': 0.9,
+                'market_analysis': 0.85,
+                'news_analysis': 0.75,
+                'historical_analysis': 0.80,
+                'user_feedback': 0.70
+            }
+            
+            source_bonus = source_scores.get(source.split('_')[0], 0.6)
+            
+            # امتیاز زمانی (الگوهای جدیدتر امتیاز بیشتر)
+            time_factor = min(1.0, (time.time() - pattern_dict.get('timestamp', 0)) / 3600)  # آخرین ساعت
+            time_bonus = 1.0 - (time_factor * 0.1)  # حداکثر 10% کاهش
+            
+            effectiveness = (base_score * 0.4 + type_bonus * 0.3 + source_bonus * 0.2 + time_bonus * 0.1)
+            
+            return min(effectiveness, 1.0)
+            
+        except Exception as e:
+            logger.error(f"خطا در محاسبه اثربخشی: {e}")
+            return confidence * 0.8
     
     async def start_enhanced_learning_burst(self, duration_seconds: int = 60):
         """شروع جلسه یادگیری فوق‌سریع تقویت‌شده"""
@@ -572,7 +894,7 @@ class EnhancedUltraLearningEngine:
             logger.error(f"خطا در بروزرسانی هوش: {e}")
     
     def get_learning_stats(self) -> dict:
-        """دریافت آمار یادگیری"""
+        """دریافت آمار یادگیری تفصیلی"""
         try:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
@@ -590,6 +912,31 @@ class EnhancedUltraLearningEngine:
             cursor.execute('SELECT COUNT(DISTINCT source) FROM enhanced_patterns')
             sources_count = cursor.fetchone()[0]
             
+            # آمار کیفیت
+            cursor.execute('SELECT AVG(effectiveness_score) FROM enhanced_patterns')
+            avg_effectiveness = cursor.fetchone()[0] or 0
+            
+            cursor.execute('SELECT COUNT(*) FROM enhanced_patterns WHERE confidence >= 0.8')
+            high_quality_patterns = cursor.fetchone()[0]
+            
+            # آمار منابع
+            cursor.execute('''
+                SELECT source, COUNT(*), AVG(confidence), AVG(effectiveness_score) 
+                FROM enhanced_patterns 
+                GROUP BY source 
+                ORDER BY COUNT(*) DESC
+            ''')
+            source_stats = cursor.fetchall()
+            
+            # آمار دسته‌بندی
+            cursor.execute('''
+                SELECT category, COUNT(*), AVG(confidence), AVG(effectiveness_score) 
+                FROM enhanced_patterns 
+                GROUP BY category 
+                ORDER BY COUNT(*) DESC
+            ''')
+            category_stats = cursor.fetchall()
+            
             # آخرین سطح هوش
             cursor.execute('''
                 SELECT intelligence_level FROM enhanced_intelligence 
@@ -598,25 +945,80 @@ class EnhancedUltraLearningEngine:
             result = cursor.fetchone()
             current_intelligence = result[0] if result else self.intelligence_score
             
+            # آمار عملکرد اخیر
+            cursor.execute('''
+                SELECT COUNT(*) FROM enhanced_patterns 
+                WHERE created_at > ?
+            ''', (time.time() - 3600,))  # آخرین ساعت
+            recent_patterns = cursor.fetchone()[0]
+            
             conn.close()
             
-            return {
+            # آماده‌سازی آمار منابع
+            source_details = {}
+            for source, count, avg_conf, avg_eff in source_stats:
+                source_details[source] = {
+                    'patterns_count': count,
+                    'avg_confidence': round(avg_conf * 100, 1) if avg_conf else 0,
+                    'avg_effectiveness': round(avg_eff * 100, 1) if avg_eff else 0,
+                    'quality_ratio': round((count / max(total_patterns, 1)) * 100, 1)
+                }
+            
+            # آماده‌سازی آمار دسته‌بندی
+            category_details = {}
+            for category, count, avg_conf, avg_eff in category_stats:
+                category_details[category] = {
+                    'patterns_count': count,
+                    'avg_confidence': round(avg_conf * 100, 1) if avg_conf else 0,
+                    'avg_effectiveness': round(avg_eff * 100, 1) if avg_eff else 0,
+                    'percentage': round((count / max(total_patterns, 1)) * 100, 1)
+                }
+            
+            detailed_stats = {
+                # آمار کلی
                 'total_patterns': total_patterns,
-                'average_confidence': round(avg_confidence * 100, 1),
+                'average_confidence': round(avg_confidence * 100, 1) if avg_confidence else 0,
+                'average_effectiveness': round(avg_effectiveness * 100, 1) if avg_effectiveness else 0,
                 'categories_count': categories_count,
                 'sources_count': sources_count,
                 'intelligence_level': round(current_intelligence, 1),
+                
+                # آمار کیفیت
+                'high_quality_patterns': high_quality_patterns,
+                'quality_percentage': round((high_quality_patterns / max(total_patterns, 1)) * 100, 1),
+                'recent_patterns_hour': recent_patterns,
+                
+                # تنظیمات سیستم
                 'learning_speed_multiplier': self.metrics.speed_multiplier,
                 'parallel_workers': self.parallel_workers,
-                'status': 'enhanced_active'
+                'cache_size': len(self.pattern_cache),
+                'learning_active': self.learning_active,
+                
+                # آمار تفصیلی
+                'source_breakdown': source_details,
+                'category_breakdown': category_details,
+                
+                # وضعیت سیستم
+                'status': 'enhanced_active',
+                'last_updated': datetime.now().isoformat(),
+                'memory_usage': {
+                    'pattern_cache': len(self.pattern_cache),
+                    'smart_cache': len(self.smart_cache),
+                    'frequency_tracker': len(self.frequency_tracker)
+                }
             }
+            
+            logger.info(f"آمار یادگیری: {total_patterns} الگو، {round(avg_confidence * 100, 1)}% confidence متوسط")
+            
+            return detailed_stats
             
         except Exception as e:
             logger.error(f"خطا در دریافت آمار: {e}")
             return {
                 'total_patterns': self.patterns_learned,
                 'intelligence_level': round(self.intelligence_score, 1),
-                'status': 'error'
+                'status': 'error',
+                'error': str(e)
             }
     
     def start_continuous_learning(self):
