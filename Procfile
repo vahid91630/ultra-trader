@@ -1,1 +1,1 @@
-web: streamlit run ultra_dashboard/dashboard.py --server.enableCORS false --server.port $PORT
+web: gunicorn -c gunicorn.conf.py optimized_deployment_entry:app

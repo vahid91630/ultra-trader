@@ -91,4 +91,7 @@ def api_status():
 
 if __name__ == '__main__':
     print(f"🚀 Starting ultra-minimal deployment on port {PORT}")
+    # Development mode fallback (if run directly with python)
+    print("⚠️  Running in development mode. Use Gunicorn for production:")
+    print(f"   gunicorn -c gunicorn.conf.py optimized_deployment_entry:app")
     app.run(host='0.0.0.0', port=PORT, debug=False)

@@ -17,8 +17,9 @@ COPY requirements_deployment_minimal.txt requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt && \
     pip cache purge
 
-# Copy single entry point
+# Copy deployment files
 COPY optimized_deployment_entry.py .
+COPY gunicorn.conf.py .
 
 # Single port exposure
 EXPOSE 5000
@@ -27,4 +28,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=2 \
   CMD curl -f http://localhost:5000/health || exit 1
 
-CMD ["python", "optimized_deployment_entry.py"]
+CMD ["gunicorn", "-c", "gunicorn.conf.py", "optimized_deployment_entry:app"]
