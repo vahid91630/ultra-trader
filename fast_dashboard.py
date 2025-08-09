@@ -36,7 +36,7 @@ def api_data():
     try:
         now_tehran = datetime.now(TEHRAN_TZ)
         data = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(pytz.UTC).isoformat(),
             "tehran_time": now_tehran.strftime("%Y-%m-%d %H:%M:%S"),
             "uptime": get_uptime(),
             "system_resources": get_system_resources(),
