@@ -1,0 +1,89 @@
+# GBT Training Configuration
+experiment_name: "gbt_default"
+model_type: "lightgbm"  # Options: lightgbm, xgboost
+
+# Data Configuration
+data:
+  source: "csv"  # Options: csv, mongodb
+  csv_path: "data/sample_data.csv"  # Used when source=csv
+  mongodb_collection: "price_data"  # Used when source=mongodb
+  
+  # Feature engineering
+  technical_indicators:
+    - "sma_5"
+    - "sma_20"
+    - "ema_12"
+    - "ema_26"
+    - "rsi_14"
+    - "macd"
+    - "bb_upper"
+    - "bb_lower"
+    - "atr_14"
+    - "volume_sma_10"
+  
+  # Target configuration
+  target:
+    type: "direction"  # Options: direction, returns, volatility
+    horizon: 1  # Bars ahead to predict
+    threshold: 0.001  # Minimum change for direction classification
+
+# Model Configuration
+model:
+  lightgbm:
+    objective: "binary"
+    metric: "binary_logloss"
+    boosting_type: "gbdt"
+    num_leaves: 31
+    learning_rate: 0.1
+    feature_fraction: 0.9
+    bagging_fraction: 0.8
+    bagging_freq: 5
+    verbose: -1
+
+  xgboost:
+    objective: "binary:logistic"
+    eval_metric: "logloss"
+    max_depth: 6
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    silent: 1
+
+# Cross-validation
+cv:
+  method: "TimeSeriesSplit"
+  n_splits: 5
+  test_size: 0.2
+
+# Hyperparameter optimization
+optuna:
+  n_trials: 100
+  timeout: 3600  # seconds
+  study_name: "gbt_optimization"
+  optimization_direction: "maximize"  # maximize AUC
+  
+  # Parameter search spaces
+  search_space:
+    lightgbm:
+      num_leaves: [10, 100]
+      learning_rate: [0.01, 0.3]
+      feature_fraction: [0.5, 1.0]
+      bagging_fraction: [0.5, 1.0]
+      min_child_samples: [10, 100]
+      reg_alpha: [0.0, 1.0]
+      reg_lambda: [0.0, 1.0]
+    
+    xgboost:
+      max_depth: [3, 10]
+      learning_rate: [0.01, 0.3]
+      subsample: [0.5, 1.0]
+      colsample_bytree: [0.5, 1.0]
+      reg_alpha: [0.0, 1.0]
+      reg_lambda: [0.0, 1.0]
+
+# Training
+training:
+  validation_metric: "auc"
+  early_stopping_rounds: 50
+  save_artifacts: true
+  artifacts_path: "models/"
