@@ -1,4 +1,5 @@
-streamlit
+flask
 pymongo[srv]
 python-dotenv
 python-binance
+psutil
