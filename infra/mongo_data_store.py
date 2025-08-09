@@ -1,31 +1,45 @@
-from pymongo import MongoClient
-from datetime import datetime
+"""
+Mongo connector used by the dashboard.
+Why: unify env handling and avoid falling back to 'experimental' UIs.
+"""
+from __future__ import annotations
 import os
+from typing import Optional, Tuple
+from pymongo import MongoClient
 
-def connect_to_mongodb():
-    uri = os.getenv("MONGODB_URI")
-    if not uri:
-        print("⚠️ MONGO_URI not set – Running in Safe Mode")
-        return None
+
+def _pick_env(*names: str) -> Optional[str]:
+    for n in names:
+        v = os.getenv(n)
+        if v and str(v).strip():
+            return v
+    return None
+
+
+def _extract_db_name(uri: str) -> Optional[str]:
+    # Why: Some URIs include db name, others not (e.g. mongodb+srv://.../ultra_trader?...)
     try:
-        client = MongoClient(uri)
-        return client
-    except Exception as e:
-        print("❌ اتصال به دیتابیس ناموفق بود:", str(e))
+        tail = uri.rsplit("/", 1)[-1]
+        return tail.split("?", 1)[0] if tail else None
+    except Exception:
         return None
 
-def save_btc_price(price: float, source="binance"):
-    client = connect_to_mongodb()
-    if not client:
-        return
 
-    db = client["ultra_trader"]
-    collection = db["btc_prices"]
-    document = {
-        "price": price,
-        "timestamp": datetime.utcnow(),
-        "source": source
-    }
+def connect_to_mongodb() -> Tuple[Optional[MongoClient], Optional[str]]:
+    """
+    Returns (client, dbname). If fails, returns (None, None).
+    Why: dashboard must know both connection and db name.
+    """
+    uri = _pick_env("MONGODB_URI", "MONGO_URI")
+    if not uri:
+        print("⚠️ Neither MONGODB_URI nor MONGO_URI is set.")
+        return None, None
 
-    result = collection.insert_one(document)
-    print(f"✅ قیمت ذخیره شد (ID: {result.inserted_id})")
+    dbname = _extract_db_name(uri) or os.getenv("MONGODB_DB") or "ultra_trader"
+    try:
+        client = MongoClient(uri, serverSelectionTimeoutMS=4000)
+        client.admin.command("ping")
+        return client, dbname
+    except Exception as exc:
+        print(f"❌ Mongo connection failed: {exc}")
+        return None, None
