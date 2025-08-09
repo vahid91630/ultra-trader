@@ -1,11 +1,13 @@
+"""
+Deprecated root-level dashboard.
+Why: avoid running the old/experimental UI on Railway.
+"""
 import streamlit as st
-from db_connector import connect_to_mongo
 
-st.set_page_config(page_title="ULTRA PLUS Dashboard", layout="wide")
-
-st.title("📈 Ultra Plus Crypto Dashboard")
-
-data = connect_to_mongo()
-
-st.subheader("📊 Market Data")
-st.dataframe(data)
+st.set_page_config(page_title="Ultra Trader – Redirect", layout="centered")
+st.title("ℹ️ این داشبورد قدیمی/آزمایشی است")
+st.info(
+    "لطفاً داشبورد اصلی را اجرا کنید:\n\n"
+    "`streamlit run ultra_dashboard/dashboard.py`\n\n"
+    "روی Railway هم با Procfile همین مسیر اجرا می‌شود."
+)
