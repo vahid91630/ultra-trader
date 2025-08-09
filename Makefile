@@ -5,4 +5,7 @@ run:
 	python deployment/main.py
 
 dashboard:
-	python monitoring/fast_dashboard.py
+	python fast_dashboard.py
+
+monitor:
+	python -m monitoring.news_monitor
