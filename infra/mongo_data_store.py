@@ -31,3 +31,4 @@ def connect_to_mongodb() -> Tuple[Optional[MongoClient], Optional[str]]:
     except Exception as exc:
         print(f"❌ Mongo connection failed: {exc}")
         return None, None
+
