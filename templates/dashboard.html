@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultra Trader Dashboard - ربات پولساز وحید</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Tahoma', sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+        
+        .subtitle {
+            font-size: 1.1rem;
+            color: #ffffff;
+            margin-bottom: 10px;
+        }
+        
+        .time-info {
+            font-size: 1rem;
+            color: #00ff88;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-title {
+            font-size: 1.3rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #00ff88;
+            border-bottom: 2px solid rgba(0, 255, 136, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+        }
+        
+        .metric-label {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #00ff88;
+        }
+        
+        .status-good { color: #00ff88; }
+        .status-warning { color: #ffa500; }
+        .status-error { color: #ff4444; }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff88, #00cc66);
+            transition: width 0.3s ease;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #00ff88;
+            font-size: 1.1rem;
+            animation: pulse 2s infinite;
+        }
+        
+        .last-update {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #00ff88;
+            z-index: 1000;
+        }
+        
+        .error-message {
+            background: rgba(255, 68, 68, 0.2);
+            border: 1px solid #ff4444;
+            color: #ff4444;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+            
+            body {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">ربات پولساز وحید</div>
+            <div class="subtitle">Ultra Trader Dashboard</div>
+            <div class="time-info">
+                زمان: <span id="persian-time">در حال بارگذاری...</span>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <!-- System Resources Card -->
+            <div class="card">
+                <div class="card-title">🖥️ منابع سیستم</div>
+                <div id="system-info">
+                    <div class="loading">در حال بارگذاری...</div>
+                </div>
+            </div>
+            
+            <!-- Trading Data Card -->
+            <div class="card">
+                <div class="card-title">💰 داده‌های معاملاتی</div>
+                <div id="trading-data">
+                    <div class="loading">در حال بارگذاری...</div>
+                </div>
+            </div>
+            
+            <!-- API Status Card -->
+            <div class="card">
+                <div class="card-title">🔑 وضعیت API</div>
+                <div id="api-status">
+                    <div class="loading">در حال بارگذاری...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="last-update">
+        آخرین بروزرسانی: <span id="last-update">در حال بارگذاری...</span>
+    </div>
+    
+    <script>
+        let updateInterval;
+        
+        function updateDashboard() {
+            fetch('/api/data', {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.status === 'success') {
+                    updateTime(data.persian_time);
+                    updateSystemInfo(data.system_info);
+                    updateTradingData(data.trading_data);
+                    updateApiStatus(data.api_status);
+                    updateLastUpdate(data.timestamp);
+                } else {
+                    showError('خطا در دریافت داده‌ها: ' + (data.error || 'خطای نامشخص'));
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching data:', error);
+                showError('خطا در اتصال به سرور');
+            });
+        }
+        
+        function updateTime(timeData) {
+            if (timeData && timeData.formatted) {
+                document.getElementById('persian-time').textContent = timeData.formatted;
+            }
+        }
+        
+        function updateSystemInfo(data) {
+            const container = document.getElementById('system-info');
+            if (!data || data.status === 'error') {
+                container.innerHTML = '<div class="error-message">خطا در دریافت اطلاعات سیستم</div>';
+                return;
+            }
+            
+            const cpuClass = data.cpu_percent > 80 ? 'status-error' : data.cpu_percent > 60 ? 'status-warning' : 'status-good';
+            const memoryClass = data.memory_percent > 80 ? 'status-error' : data.memory_percent > 60 ? 'status-warning' : 'status-good';
+            
+            container.innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">CPU:</span>
+                    <span class="metric-value ${cpuClass}">${data.cpu_percent}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">حافظه:</span>
+                    <span class="metric-value ${memoryClass}">${data.memory_used_gb}GB / ${data.memory_total_gb}GB</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${data.memory_percent}%"></div>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">دیسک:</span>
+                    <span class="metric-value">${data.disk_used_gb}GB / ${data.disk_total_gb}GB</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${data.disk_percent}%"></div>
+                </div>
+            `;
+        }
+        
+        function updateTradingData(data) {
+            const container = document.getElementById('trading-data');
+            if (!data || data.status === 'error') {
+                container.innerHTML = '<div class="error-message">خطا در دریافت داده‌های معاملاتی</div>';
+                return;
+            }
+            
+            if (data.status === 'no_data') {
+                container.innerHTML = `
+                    <div class="metric">
+                        <span class="metric-label">وضعیت:</span>
+                        <span class="metric-value status-warning">بدون داده</span>
+                    </div>
+                    <div style="text-align: center; color: #ffa500; margin-top: 15px;">
+                        هنوز معامله‌ای انجام نشده است
+                    </div>
+                `;
+                return;
+            }
+            
+            const profitClass = data.total_profit > 0 ? 'status-good' : data.total_profit < 0 ? 'status-error' : 'status-warning';
+            const winRateClass = data.win_rate > 60 ? 'status-good' : data.win_rate > 40 ? 'status-warning' : 'status-error';
+            
+            container.innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">کل معاملات:</span>
+                    <span class="metric-value">${data.total_trades}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">نرخ برد:</span>
+                    <span class="metric-value ${winRateClass}">${data.win_rate}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">سود کل:</span>
+                    <span class="metric-value ${profitClass}">$${data.total_profit}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">موجودی فعلی:</span>
+                    <span class="metric-value">$${data.current_balance}</span>
+                </div>
+            `;
+        }
+        
+        function updateApiStatus(data) {
+            const container = document.getElementById('api-status');
+            if (!data) {
+                container.innerHTML = '<div class="error-message">خطا در دریافت وضعیت API</div>';
+                return;
+            }
+            
+            let html = '';
+            Object.entries(data).forEach(([name, info]) => {
+                const statusClass = info.status === 'active' ? 'status-good' : 'status-warning';
+                const statusText = info.status === 'active' ? 'فعال' : 'نیاز به تنظیم';
+                html += `
+                    <div class="metric">
+                        <span class="metric-label">${name}:</span>
+                        <span class="metric-value ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+        
+        function updateLastUpdate(timestamp) {
+            const date = new Date(timestamp);
+            document.getElementById('last-update').textContent = date.toLocaleString('fa-IR');
+        }
+        
+        function showError(message) {
+            console.error(message);
+            // You can add error display logic here if needed
+        }
+        
+        function startUpdates() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            updateDashboard();
+            updateInterval = setInterval(updateDashboard, 30000); // Update every 30 seconds
+        }
+        
+        function stopUpdates() {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+        }
+        
+        // Start dashboard updates
+        startUpdates();
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopUpdates();
+            } else {
+                startUpdates();
+            }
+        });
+        
+        // Handle before page unload
+        window.addEventListener('beforeunload', stopUpdates);
+        
+        // Suppress unhandled rejections
+        window.addEventListener('unhandledrejection', function(event) {
+            event.preventDefault();
+        });
+        
+        console.log('🚀 Ultra Trader Dashboard started successfully');
+    </script>
+</body>
+</html>
