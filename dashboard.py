@@ -1,3 +1,7 @@
+"""
+Deprecated root-level dashboard.
+Why: avoid running the old/experimental UI on Railway.
+"""
 import streamlit as st
 st.set_page_config(page_title="Ultra Trader – Redirect", layout="centered")
 st.title("ℹ️ این داشبورد قدیمی/آزمایشی است")
