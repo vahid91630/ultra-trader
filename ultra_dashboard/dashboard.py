@@ -1,4 +1,22 @@
-# /ultra_dashboard/dashboard.py
+"""
+Ultra Trader – unified, online Streamlit dashboard (Railway-ready).
+
+Tabs:
+- Overview
+- Financial Reports
+- Educational Reports
+- Monitoring
+
+Expected collections (rename if different):
+- prices(timestamp, price, symbol, ...)
+- signals(timestamp, symbol, signal, price, ...)
+- pnl(timestamp, pnl, ...)
+- equity_curve(timestamp, equity, ...)
+- learning_events(...)
+- learning_metrics(timestamp, loss/accuracy/reward/score, ...)
+- telemetry(timestamp, cpu, memory, ...)
+- services_health(...)
+"""
 from __future__ import annotations
 import os
 from typing import Dict, Optional
@@ -8,18 +26,24 @@ import streamlit as st
 from dotenv import load_dotenv
 from infra.mongo_data_store import connect_to_mongodb
 
+# --- Boot ---
 load_dotenv()
 st.set_page_config(page_title="Ultra Trader – Live Dashboard", layout="wide")
 st.title("📊 Ultra Trader – داشبورد آنلاین")
 REFRESH_SEC = int(os.getenv("DASHBOARD_REFRESH_SEC", "15"))
-st.caption(f"⏱️ رفرش پیشنهادی: {REFRESH_SEC}s")
+st.caption(f"⏱️ رفرش پیشنهادی: {REFRESH_SEC} ثانیه")
 
+# --- DB ---
 client, DBNAME = connect_to_mongodb()
 ONLINE = bool(client and DBNAME)
 
-def df_from_collection(coll: str, limit: int = 3000,
-                       sort: Optional[Dict[str,int]] = None,
-                       projection: Optional[Dict[str,int]] = None) -> pd.DataFrame:
+# --- Helpers ---
+def df_from_collection(
+    coll: str,
+    limit: int = 3000,
+    sort: Optional[Dict[str, int]] = None,
+    projection: Optional[Dict[str, int]] = None,
+) -> pd.DataFrame:
     if not ONLINE:
         return pd.DataFrame()
     try:
@@ -30,10 +54,10 @@ def df_from_collection(coll: str, limit: int = 3000,
             return pd.DataFrame()
         df = pd.DataFrame(rows)
         if "_id" in df.columns:
-            df = df.drop(columns=["_id"])
+            df = df.drop(columns=["_id"])  # why: UI noise
         return df
     except Exception as exc:
-        st.warning(f"⚠️ خطا در `{coll}`: {exc}")
+        st.warning(f"⚠️ خطا در خواندن `{coll}`: {exc}")
         return pd.DataFrame()
 
 def show_table(df: pd.DataFrame, title: str, rows: int = 200):
@@ -48,49 +72,70 @@ def show_ts(df: pd.DataFrame, x: str, y: str, title: str):
         fig = px.line(df.sort_values(x), x=x, y=y, title=title, markers=True)
         st.plotly_chart(fig, use_container_width=True)
 
+# --- Sidebar ---
 with st.sidebar:
     st.header("Navigation")
-    page = st.radio("صفحه", ["Overview","Financial Reports","Educational Reports","Monitoring"], index=0)
+    page = st.radio("صفحه", ["Overview", "Financial Reports", "Educational Reports", "Monitoring"], index=0)
     st.divider()
-    if ONLINE: st.success(f"🟢 Online • DB: {DBNAME}")
+    if ONLINE:
+        st.success(f"🟢 Online • DB: {DBNAME}")
     else:
-        st.error("🟡 Safe Mode: اتصال Mongo برقرار نیست.")
+        st.error("🟡 Safe Mode: اتصال به Mongo برقرار نیست.")
         st.code("export MONGODB_URI='mongodb+srv://USER:PASS@HOST/DB?retryWrites=true&w=majority'")
 
+# --- Pages ---
 if page == "Overview":
     prices = df_from_collection("prices", 3000)
     signals = df_from_collection("signals", 1000)
     pnl = df_from_collection("pnl", 3000)
-    c1,c2,c3 = st.columns(3)
-    c1.metric("prices", len(prices)); c2.metric("signals", len(signals)); c3.metric("pnl", len(pnl))
+    c1, c2, c3 = st.columns(3)
+    c1.metric("Records (prices)", len(prices))
+    c2.metric("Records (signals)", len(signals))
+    c3.metric("Records (pnl)", len(pnl))
     show_ts(prices, "timestamp", "price", "قیمت – زنده")
-    if not signals.empty: show_table(signals, "آخرین سیگنال‌ها (۱۰۰)", 100)
-    if not pnl.empty: show_ts(pnl, "timestamp", "pnl", "PnL – عملکرد")
+    if not signals.empty:
+        show_table(signals, "آخرین سیگنال‌ها (۱۰۰)", 100)
+    if not pnl.empty:
+        show_ts(pnl, "timestamp", "pnl", "PnL – عملکرد")
 
 elif page == "Financial Reports":
+    st.markdown("### گزارشات مالی")
     prices = df_from_collection("prices", 5000)
     signals = df_from_collection("signals", 2000)
     pnl = df_from_collection("pnl", 5000)
     equity = df_from_collection("equity_curve", 5000)
     show_ts(prices, "timestamp", "price", "قیمت زنده")
-    if not signals.empty: show_table(signals, "سیگنال‌ها", 200)
-    if not pnl.empty: show_ts(pnl, "timestamp", "pnl", "PnL")
-    if not equity.empty: show_ts(equity, "timestamp", "equity", "Equity Curve")
+    if not signals.empty:
+        show_table(signals, "سیگنال‌ها", 200)
+    if not pnl.empty:
+        show_ts(pnl, "timestamp", "pnl", "PnL")
+    if not equity.empty:
+        show_ts(equity, "timestamp", "equity", "Equity Curve")
 
 elif page == "Educational Reports":
+    st.markdown("### گزارشات آموزشی / یادگیری")
     le = df_from_collection("learning_events", 2000)
     lm = df_from_collection("learning_metrics", 5000)
-    if not le.empty: show_table(le, "رویدادهای یادگیری", 200)
+    if not le.empty:
+        show_table(le, "رویدادهای یادگیری", 200)
     if not lm.empty:
-        for y in ["loss","accuracy","reward","score"]:
-            if y in lm.columns: show_ts(lm, "timestamp", y, f"روند {y}")
+        for y in ["loss", "accuracy", "reward", "score"]:
+            if y in lm.columns:
+                show_ts(lm, "timestamp", y, f"روند {y}")
         show_table(lm, "شاخص‌های یادگیری", 200)
 
 else:  # Monitoring
+    st.markdown("### مانیتورینگ")
     telemetry = df_from_collection("telemetry", 2000)
     services = df_from_collection("services_health", 500)
     if not telemetry.empty:
         show_table(telemetry, "Telemetry", 200)
-        if "cpu" in telemetry.columns: show_ts(telemetry, "timestamp", "cpu", "CPU%")
-        if "memory" in telemetry.columns: show_ts(telemetry, "timestamp", "memory", "Memory%")
-    if not services.empty: show_table(services, "وضعیت سرویس‌ها", 200)
+        if "cpu" in telemetry.columns:
+            show_ts(telemetry, "timestamp", "cpu", "CPU%")
+        if "memory" in telemetry.columns:
+            show_ts(telemetry, "timestamp", "memory", "Memory%")
+    if not services.empty:
+        show_table(services, "وضعیت سرویس‌ها", 200)
+
+st.divider()
+st.caption("اگر چیزی خالی بود، یعنی کالکشن خالی است یا نام فیلد/کالکشن متفاوت است.")
