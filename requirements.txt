@@ -1,3 +1,4 @@
+# Minimal, stable deps for dashboard
 streamlit
 pymongo[srv]
 pandas
