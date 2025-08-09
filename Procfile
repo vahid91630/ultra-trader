@@ -1,1 +1,1 @@
-web: streamlit run ultra_dashboard/dashboard.py --server.enableCORS false --server.port $PORT
+web: python fast_dashboard.py
